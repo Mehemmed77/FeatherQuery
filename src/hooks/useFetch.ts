@@ -27,11 +27,17 @@ export default function useFetch<T = unknown>(url: string, option?: { pollInterv
                 if(!response.ok) throw new Error(`Error occurred: ${response.status}`);
 
                 const json = (await response.json()) as T;
-                if(!ignore) setData(json);
+                if(!ignore) {
+                    setError(null);
+                    setData(json)
+                };
             }
 
             catch(error) {
-                if (error instanceof Error && error.name !== "AbortError" && !ignore) setError(error); 
+                if (error instanceof Error && error.name !== "AbortError" && !ignore) {
+                    setData(null)
+                    setError(error)
+                }; 
             }
 
             finally {
