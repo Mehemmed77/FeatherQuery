@@ -1,87 +1,143 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCachedValue, setCachedValue } from '../cache';
+import { type STATUS } from '../types/statusType';
 
 export default function useQuery<T = unknown>(
-  key: string,
-  fetcher: (signal: AbortSignal) => Promise<T>,
-  options?: { pollInterval: number, keepPreviousData?: boolean }
+    key: string,
+    fetcher: (signal: AbortSignal) => Promise<T>,
+    options?: {
+        pollInterval?: number;
+        staleTime?: number;
+        onSuccess?: (data: T, isPolling: boolean, isManualRefreshing: boolean) => any;
+        onError?: (error: Error, isRefetch: boolean) => any;
+        onSettled?: (data: T | null, error: Error | null) => any;
+    }
 ) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [fetching, setFetching] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+    // States
+    const [data, setData] = useState<T | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [fetching, setFetching] = useState<boolean>(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [status, setStatus] = useState<STATUS>('STATIC');
 
-  const { pollInterval, keepPreviousData = true } = options;
+    // Refs
+    const hasFetchedOnce = useRef<number>(0);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const intervalId = useRef<number | null>(null);
+    const requestInFlight = useRef<boolean>(false);
+    const lastRequestId = useRef<number>(0);
 
-  const numOfRequestRef = useRef<number>(0);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const intervalId = useRef<number | null>(null);
-  const requestInFlight = useRef<boolean>(false);
-  
-  const fetchData = async () => {
-    if (numOfRequestRef.current === 0 && !getCachedValue<T>(key)) setLoading(true);
-      
-      try{
-          if (abortControllerRef.current) abortControllerRef.current.abort();
-          abortControllerRef.current = new AbortController();
+    const {
+        pollInterval,
+        staleTime = 0,
+        onSuccess,
+        onError,
+        onSettled,
+    } = options ?? {};
 
-          if (!loading) setFetching(true);
+    const fetchFresh = async (currentRequestId: number, isPolling: boolean, isManualRefreshing: boolean) => {
+        const newData = await fetcher(abortControllerRef.current.signal);
+        if (currentRequestId !== lastRequestId.current) return;
 
-          requestInFlight.current = true;
-
-          const cachedData = getCachedValue<T>(key);
-          
-          if(cachedData) setData(cachedData.data);
-
-          else {
-            const newData = await fetcher(abortControllerRef.current.signal);
-
-            setData(newData);
-            setCachedValue<T>(key, { data: newData, updatedAt: Date.now() });
-          }
-
-          numOfRequestRef.current = 1;
-          setError(null);
-      }
-
-      catch(error) {
-          if(error instanceof Error && error.name !== "AbortError") {
-              setError(error);
-              if (!keepPreviousData) setData(null);
-          };
-      }
-
-      finally {
-          if (loading) setLoading(false);
-          setFetching(false);
-          requestInFlight.current = false;
-      }
-  };
-
-  useEffect(() => {
-    numOfRequestRef.current = 0;
-    fetchData();
-
-    if(pollInterval && pollInterval > 0) {
-        intervalId.current = setInterval(() => {
-            if(!requestInFlight.current) fetchData();
-
-        },  pollInterval);
+        setCachedValue<T>(key, { data: newData, updatedAt: Date.now() });
+        setData(newData);
+        onSuccess?.(newData, isPolling, isManualRefreshing);
     };
 
-    return () => {
-        if(intervalId.current) clearInterval(intervalId.current);
-        if(abortControllerRef.current) abortControllerRef.current.abort();
-        intervalId.current = null;
-    }
+    const fetchData = async (isPolling?: boolean) => {
+        if (hasFetchedOnce.current === 0 && !getCachedValue<T>(key)) {
+            setStatus('LOADING');
+            setLoading(true);
+        }
 
-  }, [key, fetcher]);
+        try {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+            abortControllerRef.current = new AbortController();
 
-  const refetch = useCallback(() => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    fetchData();
+            const currentRequestId = ++lastRequestId.current;
 
-  }, [key, fetcher]);
+            if (hasFetchedOnce.current !== 0) {
+                setStatus('FETCHING');
+                setFetching(true);
+            }
 
-  return { data, loading, error, fetching, refetch };
+            requestInFlight.current = true;
+
+            const cachedData = getCachedValue<T>(key);
+            
+            // this boolean value will also be true if the staleTime is zero
+            const isDataStale = cachedData
+            ? Date.now() - cachedData.updatedAt > staleTime
+            : true;
+
+            if (cachedData) {
+                setData(cachedData.data);
+                if (isPolling) await fetchFresh(currentRequestId, true, false);
+                else if(isDataStale) await fetchFresh(currentRequestId, false, true);
+            }
+
+            else {
+                const newData = await fetcher(
+                    abortControllerRef.current.signal
+                );
+                if (currentRequestId !== lastRequestId.current) return;
+                
+                setData(newData);
+                onSuccess?.(newData, false, false);
+                
+                setCachedValue<T>(key, {
+                    data: newData,
+                    updatedAt: Date.now(),
+                });
+            }
+            
+            if(hasFetchedOnce.current === 0) setLoading(false);
+
+            hasFetchedOnce.current = 1;
+            setStatus('SUCCESS');
+            setError(null);
+            requestInFlight.current = false;
+            
+        } catch (error) {
+            if (error instanceof Error && error.name !== 'AbortError') {
+                setStatus('ERROR');
+                setError(error);
+                onError?.(error, fetching);
+                requestInFlight.current = false;
+            }
+
+        } finally {
+            setFetching(false);
+
+            onSettled?.(getCachedValue<T>(key)?.data ?? null, error ?? null);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+
+        if (pollInterval && pollInterval > 0) {
+            intervalId.current = setInterval(() => {
+                if (!requestInFlight.current) {
+                    fetchData(true);
+                }
+            }, pollInterval);
+        }
+
+        return () => {
+            if (intervalId.current) clearInterval(intervalId.current);
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+            hasFetchedOnce.current = 0;
+            intervalId.current = null;
+        };
+    }, [key, fetcher]);
+
+    const refetch = useCallback(async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        };
+        return fetchData();
+    }, [key, fetcher]);
+
+    return { data, loading, error, fetching, status, refetch };
 }
