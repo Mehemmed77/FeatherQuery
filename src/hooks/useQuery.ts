@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCachedValue, setCachedValue } from '../cache';
-import { type STATUS } from '../types/statusType';
+import { type STATUS } from '../types/queryStatusType';
 
 export default function useQuery<T = unknown>(
     key: string,
@@ -8,7 +8,11 @@ export default function useQuery<T = unknown>(
     options?: {
         pollInterval?: number;
         staleTime?: number;
-        onSuccess?: (data: T, isPolling: boolean, isManualRefreshing: boolean) => any;
+        onSuccess?: (
+            data: T,
+            isPolling: boolean,
+            isManualRefreshing: boolean
+        ) => any;
         onError?: (error: Error, isRefetch: boolean) => any;
         onSettled?: (data: T | null, error: Error | null) => any;
     }
@@ -35,11 +39,20 @@ export default function useQuery<T = unknown>(
         onSettled,
     } = options ?? {};
 
-    const fetchFresh = async (currentRequestId: number, isPolling: boolean, isManualRefreshing: boolean) => {
+    const fetchFresh = async (
+        currentRequestId: number,
+        isPolling: boolean,
+        isManualRefreshing: boolean
+    ) => {
         const newData = await fetcher(abortControllerRef.current.signal);
         if (currentRequestId !== lastRequestId.current) return;
 
-        setCachedValue<T>(key, { data: newData, updatedAt: Date.now() });
+        const now = Date.now();
+        setCachedValue<T>(key, {
+            data: newData,
+            updatedAt: now,
+            cacheTime: staleTime ? staleTime + now : Infinity,
+        });
         setData(newData);
         onSuccess?.(newData, isPolling, isManualRefreshing);
     };
@@ -64,40 +77,40 @@ export default function useQuery<T = unknown>(
             requestInFlight.current = true;
 
             const cachedData = getCachedValue<T>(key);
-            
+
             // this boolean value will also be true if the staleTime is zero
             const isDataStale = cachedData
-            ? Date.now() - cachedData.updatedAt > staleTime
-            : true;
+                ? Date.now() - cachedData.updatedAt > staleTime
+                : true;
 
             if (cachedData) {
                 setData(cachedData.data);
                 if (isPolling) await fetchFresh(currentRequestId, true, false);
-                else if(isDataStale) await fetchFresh(currentRequestId, false, true);
-            }
-
-            else {
+                else if (isDataStale)
+                    await fetchFresh(currentRequestId, false, true);
+            } else {
                 const newData = await fetcher(
                     abortControllerRef.current.signal
                 );
                 if (currentRequestId !== lastRequestId.current) return;
-                
+
                 setData(newData);
                 onSuccess?.(newData, false, false);
-                
+
+                const now = Date.now();
                 setCachedValue<T>(key, {
                     data: newData,
                     updatedAt: Date.now(),
+                    cacheTime: staleTime ? staleTime + now : Infinity,
                 });
             }
-            
-            if(hasFetchedOnce.current === 0) setLoading(false);
+
+            if (hasFetchedOnce.current === 0) setLoading(false);
 
             hasFetchedOnce.current = 1;
             setStatus('SUCCESS');
             setError(null);
             requestInFlight.current = false;
-            
         } catch (error) {
             if (error instanceof Error && error.name !== 'AbortError') {
                 setStatus('ERROR');
@@ -105,7 +118,6 @@ export default function useQuery<T = unknown>(
                 onError?.(error, fetching);
                 requestInFlight.current = false;
             }
-
         } finally {
             setFetching(false);
 
@@ -135,7 +147,7 @@ export default function useQuery<T = unknown>(
     const refetch = useCallback(async () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
-        };
+        }
         return fetchData();
     }, [key, fetcher]);
 
