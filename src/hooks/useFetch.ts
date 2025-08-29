@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import usePolling from '../utils/usePolling';
 
 export default function useFetch<T = unknown>(
     url: string,
@@ -10,7 +11,6 @@ export default function useFetch<T = unknown>(
     const [trigger, setTrigger] = useState<number>(0);
 
     const abortControllerRef = useRef<AbortController | null>(null);
-    const intervalId = useRef<number | null>(null);
     const requestInFlight = useRef<boolean>(false);
 
     const { pollInterval } = option ?? {};
@@ -46,21 +46,12 @@ export default function useFetch<T = unknown>(
 
     useEffect(() => {
         fetchData();
-
-        if (pollInterval && pollInterval !== 0) {
-            intervalId.current = setInterval(() => {
-                if (!requestInFlight.current) fetchData();
-            }, pollInterval);
-        }
+        usePolling(fetchData, pollInterval, requestInFlight.current);
 
         return () => {
-            if (intervalId.current) {
-                clearInterval(intervalId.current);
-                intervalId.current = null;
-            }
-
             if(abortControllerRef.current) abortControllerRef.current.abort();
         };
+
     }, [url, trigger, pollInterval]);
 
     const refetch = () => {

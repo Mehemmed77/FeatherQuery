@@ -1,9 +1,4 @@
-type CacheEntry<T> = {
-    data: T;
-    updatedAt: number;
-    cacheTime: number;
-    error?: Error;
-};
+import { CacheEntry } from "./types/CacheTypes";
 
 const globalCache: Record<string, CacheEntry<unknown>> = {};
 

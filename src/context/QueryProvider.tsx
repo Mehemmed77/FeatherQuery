@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { PropsWithChildren } from "react";
 import startCacheGC from "../cache";
+import QueryContext from "./QueryContext";
+import { getCachedValue, deleteCachedValue, setCachedValue } from "../cache";
 
 interface QueryProviderProps {
     interval: number;
@@ -21,7 +23,9 @@ const QueryProvider = ({interval = 60000, defaultCacheTime = 300000, children}: 
     }, [interval]);
 
     return (
-        {children}
+        <QueryContext.Provider value={{setCachedValue, deleteCachedValue, getCachedValue}}>
+            {children}
+        </QueryContext.Provider>
     );
 }
 

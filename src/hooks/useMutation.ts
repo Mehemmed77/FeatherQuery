@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { MutateFn, MutateOptions } from '../types/UseMutateTypes';
 import { STATUS } from '../types/mutateStatusType';
+import useRequestIdTracker from '../utils/useLastRequestId';
 
 export default function useMutation<TData, TError, TVariables>(
     options: MutateOptions<TData, TError, TVariables>
 ): MutateFn<TData, TError, TVariables> {
     const { mutateFn, url, method, headers, onSuccess, onError, onSettled } = options;
+    const { lastRequestId, incrementAndGet } = useRequestIdTracker();
 
     let executeMutation: (variables: TVariables) => Promise<TData>;
 
@@ -28,20 +30,17 @@ export default function useMutation<TData, TError, TVariables>(
     const [data, setData] = useState<TData | null>(null);
     const [error, setError] = useState<TError | null>(null);
 
-    // REFS
-    const lastRequestId = useRef<number>(0);
-
     const execute = useCallback(async (variables: TVariables): Promise<TData> => {
         let tempData: TData | null = null;
         let tempError: TError | null = null;
     
         setStatus("LOADING");
-        const tempRequestID = ++lastRequestId.current;
+        const tempRequestID = incrementAndGet();
         
         try {
             const data = await executeMutation(variables);
     
-            if (tempRequestID !== lastRequestId.current) return;
+            if (tempRequestID !== lastRequestId) return;
     
             tempData = data;
             setStatus("SUCCESS");
