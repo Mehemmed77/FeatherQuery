@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export default function useFetch<T = unknown>(url: string, option?: { pollInterval?: number }) {
+export default function useFetch<T = unknown>(
+    url: string,
+    option?: { pollInterval?: number }
+) {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
@@ -10,12 +13,9 @@ export default function useFetch<T = unknown>(url: string, option?: { pollInterv
     const intervalId = useRef<number | null>(null);
     const requestInFlight = useRef<boolean>(false);
 
-    const { pollInterval } = option;
+    const { pollInterval } = option ?? {};
 
-    useEffect(() => {
-        let ignore = false;
-      
-        const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async () => {
             setLoading(true);
 
             try {
@@ -26,27 +26,25 @@ export default function useFetch<T = unknown>(url: string, option?: { pollInterv
                 const response = await fetch(url, { signal: abortControllerRef.current.signal });
                 if(!response.ok) throw new Error(`Error occurred: ${response.status}`);
 
-                const json = (await response.json()) as T;
-                if(!ignore) {
-                    setError(null);
-                    setData(json)
-                };
+                const json = response as T;
+                setError(null);
+                setLoading(false);
+                setData(json);
             }
 
-            catch(error) {
-                if (error instanceof Error && error.name !== "AbortError" && !ignore) {
-                    setData(null)
-                    setError(error)
-                }; 
-            }
-
-            finally {
-                if(!ignore) setLoading(false);
+            catch (error) {
+                if (
+                    error instanceof Error &&
+                    error.name !== 'AbortError') {
+                    setData(null);
+                    setError(error);
+                }
+            } finally {
                 requestInFlight.current = false;
             }
-
         }, [url]);
 
+    useEffect(() => {
         fetchData();
 
         if (pollInterval && pollInterval !== 0) {
@@ -56,19 +54,19 @@ export default function useFetch<T = unknown>(url: string, option?: { pollInterv
         }
 
         return () => {
-            ignore = true;
-            if(intervalId.current) {
+            if (intervalId.current) {
                 clearInterval(intervalId.current);
                 intervalId.current = null;
-            };
-        }
+            }
 
+            if(abortControllerRef.current) abortControllerRef.current.abort();
+        };
     }, [url, trigger, pollInterval]);
 
     const refetch = () => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
-        setTrigger(prev => prev + 1);
+        setTrigger((prev) => prev + 1);
     };
 
-    return {data, loading, error, refetch};
+    return { data, loading, error, refetch };
 }

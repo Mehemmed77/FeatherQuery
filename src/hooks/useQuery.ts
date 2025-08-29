@@ -86,8 +86,7 @@ export default function useQuery<T = unknown>(
             if (cachedData) {
                 setData(cachedData.data);
                 if (isPolling) await fetchFresh(currentRequestId, true, false);
-                else if (isDataStale)
-                    await fetchFresh(currentRequestId, false, true);
+                else if (isDataStale) await fetchFresh(currentRequestId, false, true);
             } else {
                 const newData = await fetcher(
                     abortControllerRef.current.signal
