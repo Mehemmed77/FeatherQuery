@@ -11,6 +11,7 @@ export default function useMutation<TData, TError, TVariables>(
 
     if (mutateFn) executeMutation = mutateFn;
     else if (url && method){
+        const requestHeaders = {"Content-type": "application/json", ...headers}
         executeMutation = async (variables: TVariables) => {
             return await fetch(url, {
                 method: method,

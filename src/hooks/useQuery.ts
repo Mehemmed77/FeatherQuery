@@ -13,14 +13,12 @@ export default function useQuery<T = unknown>(
             isPolling: boolean,
             isManualRefreshing: boolean
         ) => any;
-        onError?: (error: Error, isRefetch: boolean) => any;
+        onError?: (error: Error) => any;
         onSettled?: (data: T | null, error: Error | null) => any;
     }
 ) {
     // States
     const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [fetching, setFetching] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
     const [status, setStatus] = useState<STATUS>('STATIC');
 
@@ -58,10 +56,7 @@ export default function useQuery<T = unknown>(
     };
 
     const fetchData = async (isPolling?: boolean) => {
-        if (hasFetchedOnce.current === 0 && !getCachedValue<T>(key)) {
-            setStatus('LOADING');
-            setLoading(true);
-        }
+        if (hasFetchedOnce.current === 0 && !getCachedValue<T>(key)) setStatus('LOADING');
 
         try {
             if (abortControllerRef.current) abortControllerRef.current.abort();
@@ -69,10 +64,7 @@ export default function useQuery<T = unknown>(
 
             const currentRequestId = ++lastRequestId.current;
 
-            if (hasFetchedOnce.current !== 0) {
-                setStatus('FETCHING');
-                setFetching(true);
-            }
+            if (hasFetchedOnce.current !== 0) setStatus('FETCHING');
 
             requestInFlight.current = true;
 
@@ -86,12 +78,11 @@ export default function useQuery<T = unknown>(
             if (cachedData) {
                 setData(cachedData.data);
                 if (isPolling) await fetchFresh(currentRequestId, true, false);
-                else if (isDataStale)
-                    await fetchFresh(currentRequestId, false, true);
-            } else {
-                const newData = await fetcher(
-                    abortControllerRef.current.signal
-                );
+                else if (isDataStale) await fetchFresh(currentRequestId, false, true);
+            }
+
+            else {
+                const newData = await fetcher(abortControllerRef.current.signal);
                 if (currentRequestId !== lastRequestId.current) return;
 
                 setData(newData);
@@ -105,22 +96,19 @@ export default function useQuery<T = unknown>(
                 });
             }
 
-            if (hasFetchedOnce.current === 0) setLoading(false);
-
             hasFetchedOnce.current = 1;
             setStatus('SUCCESS');
             setError(null);
             requestInFlight.current = false;
+
         } catch (error) {
             if (error instanceof Error && error.name !== 'AbortError') {
                 setStatus('ERROR');
                 setError(error);
-                onError?.(error, fetching);
+                onError?.(error);
                 requestInFlight.current = false;
             }
         } finally {
-            setFetching(false);
-
             onSettled?.(getCachedValue<T>(key)?.data ?? null, error ?? null);
         }
     };
@@ -151,5 +139,5 @@ export default function useQuery<T = unknown>(
         return fetchData();
     }, [key, fetcher]);
 
-    return { data, loading, error, fetching, status, refetch };
+    return { data, error, status, refetch };
 }
