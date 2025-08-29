@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { MutateFn, MutateOptions } from '../types/UseMutateTypes';
 import { STATUS } from '../types/mutateStatusType';
 
@@ -11,12 +11,12 @@ export default function useMutation<TData, TError, TVariables>(
 
     if (mutateFn) executeMutation = mutateFn;
     else if (url && method){
-        const requestHeaders = {"Content-type": "application/json", ...headers}
+        const requestHeaders = {"Content-type": "application/json",...headers}
         executeMutation = async (variables: TVariables) => {
             return await fetch(url, {
                 method: method,
                 body: JSON.stringify(variables),
-                ...(headers ? {headers: headers} : { headers: { "Content-type": "application/json" } })
+                headers: requestHeaders,
             }).then((data) => data.json() as Promise<TData>);
         }
     } else{
@@ -31,18 +31,18 @@ export default function useMutation<TData, TError, TVariables>(
     // REFS
     const lastRequestId = useRef<number>(0);
 
-    const execute = async (variables: TVariables): Promise<TData> => {
+    const execute = useCallback(async (variables: TVariables): Promise<TData> => {
         let tempData: TData | null = null;
         let tempError: TError | null = null;
-
+    
         setStatus("LOADING");
         const tempRequestID = ++lastRequestId.current;
         
         try {
             const data = await executeMutation(variables);
-
+    
             if (tempRequestID !== lastRequestId.current) return;
-
+    
             tempData = data;
             setStatus("SUCCESS");
             setError(null);
@@ -63,7 +63,7 @@ export default function useMutation<TData, TError, TVariables>(
         finally {
             onSettled?.(tempData, tempError, variables);
         }
-    }
+    }, [executeMutation]);
     
     const mutate = (variables: TVariables) => execute(variables).catch(() => {});
 

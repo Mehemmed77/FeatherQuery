@@ -20,10 +20,10 @@ export function deleteCachedValue(key?: string) {
     else Object.keys(globalCache).forEach(k => delete globalCache[k]);
 }
 
-function startCacheGC(interval = 60000) {
+export default function startCacheGC(interval: number, defaultCacheTime: number) {
     return setInterval(() => {
         Object.entries(globalCache).forEach(([key, value]) => {
-            if(Date.now() - value.updatedAt > 300000) {
+            if(Date.now() - value.updatedAt > defaultCacheTime) {
                 delete globalCache[key];
             }
         });
