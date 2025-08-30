@@ -46,7 +46,7 @@ export default function useFetch<T = unknown>(
 
     useEffect(() => {
         fetchData();
-        usePolling(fetchData, pollInterval, requestInFlight.current);
+        usePolling(fetchData, pollInterval ?? 0, requestInFlight);
 
         return () => {
             if(abortControllerRef.current) abortControllerRef.current.abort();

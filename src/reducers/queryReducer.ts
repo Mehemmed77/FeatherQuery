@@ -1,18 +1,19 @@
 import { STATUS } from '../types/queryStatusType';
 
-interface QueryState<T> {
+interface QueryState<T, E = Error> {
     data: T | null;
-    error: Error | null;
+    error: E | null;
     status: STATUS;
 }
 
-export type QueryAction<T> =
+export type QueryAction<T, E = Error> =
     | { type: 'LOADING' }
     | { type: 'FETCHING' }
     | { type: 'SUCCESS'; data: T }
-    | { type: 'ERROR'; error: Error };
+    | { type: 'ERROR'; error: E }
+    | { type: "RESET"; status: STATUS  };
 
-export function queryReducer<T>(state: QueryState<T>, action: QueryAction<T>): QueryState<T> {
+export function queryReducer<T, E extends Error = Error>(state: QueryState<T, E>, action: QueryAction<T, E>): QueryState<T> {
     switch (action.type) {
         case "LOADING": {
             return {...state, status: "LOADING"};
@@ -30,6 +31,10 @@ export function queryReducer<T>(state: QueryState<T>, action: QueryAction<T>): Q
         case "ERROR": {
             const error = action.error;
             return {...state, error: error, status: "ERROR"};
+        }
+
+        case "RESET": {
+            return {data: null, error: null, status: action.status}
         }
     }
 }

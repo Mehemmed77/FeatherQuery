@@ -1,4 +1,4 @@
-import { QueryAction } from '../reducers/QueryReducer';
+import { QueryAction } from '../reducers/queryReducer';
 import { updateCache } from './cacheUtils';
 
 export async function fetchFresh<T>(

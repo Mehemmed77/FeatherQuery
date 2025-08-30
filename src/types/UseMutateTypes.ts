@@ -1,10 +1,10 @@
-import { STATUS } from "./mutateStatusType";
+import { STATUS } from './queryStatusType';
 
-export interface MutateFn<TData, TError, TVariables> {
+export interface MutateFn<TData, TError extends Error, TVariables> {
     mutate: (variables: TVariables) => void;
     mutateAsync: (variables: TVariables) => Promise<TData>;
 
-    status: STATUS
+    status: STATUS;
 
     data: TData | null;
     error: TError | null;
@@ -12,7 +12,7 @@ export interface MutateFn<TData, TError, TVariables> {
     reset: () => void;
 }
 
-type MutateCallbacks<TData, TError, TVariables> = {
+type MutateCallbacks<TData, TError extends Error, TVariables> = {
     onSuccess?: (data: TData, variables: TVariables) => void;
     onError?: (error: TError, variables: TVariables) => void;
     onSettled?: (
@@ -22,14 +22,16 @@ type MutateCallbacks<TData, TError, TVariables> = {
     ) => void;
 };
 
-export type MutateOptions<TData, TError, TVariables> =
+export type MutateOptions<TData, TError extends Error, TVariables> =
     | ({
           mutateFn: (variables: TVariables) => Promise<TData>;
+          invalidateKeys?: string[];
           url?: never;
           method?: never;
           headers?: never;
       } & MutateCallbacks<TData, TError, TVariables>)
     | ({
+          invalidateKeys?: string[];
           url: string;
           method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
           mutateFn?: never;

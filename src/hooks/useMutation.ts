@@ -1,12 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useReducer } from 'react';
 import { MutateFn, MutateOptions } from '../types/UseMutateTypes';
-import { STATUS } from '../types/mutateStatusType';
 import useRequestIdTracker from '../utils/useLastRequestId';
+import { queryReducer } from '../reducers/queryReducer';
+import useQueryClient from '../utils/useQueryClient';
 
-export default function useMutation<TData, TError, TVariables>(
+export default function useMutation<TData, TError extends Error, TVariables>(
     options: MutateOptions<TData, TError, TVariables>
 ): MutateFn<TData, TError, TVariables> {
-    const { mutateFn, url, method, headers, onSuccess, onError, onSettled } = options;
+    const { mutateFn, url, method, headers, onSuccess, onError, onSettled, invalidateKeys } = options;
     const { lastRequestId, incrementAndGet } = useRequestIdTracker();
 
     let executeMutation: (variables: TVariables) => Promise<TData>;
@@ -26,36 +27,42 @@ export default function useMutation<TData, TError, TVariables>(
     }
 
     // STATES
-    const [status, setStatus] = useState<STATUS>("IDLE");
-    const [data, setData] = useState<TData | null>(null);
-    const [error, setError] = useState<TError | null>(null);
+    const [state, dispatch] = useReducer(queryReducer<TData, TError>, 
+        {data: null,error: null,status: "IDLE"}
+    )
+
+    const { deleteCachedValue } = useQueryClient();
+
+    const { data, status } = state;
+    const error = state.error as TError;
 
     const execute = useCallback(async (variables: TVariables): Promise<TData> => {
         let tempData: TData | null = null;
         let tempError: TError | null = null;
     
-        setStatus("LOADING");
+        dispatch({type: "LOADING"});
         const tempRequestID = incrementAndGet();
         
         try {
-            const data = await executeMutation(variables);
+            const newData = await executeMutation(variables);
     
             if (tempRequestID !== lastRequestId) return;
-    
-            tempData = data;
-            setStatus("SUCCESS");
-            setError(null);
-            setData(data);
-            onSuccess?.(data, variables);
+
+            tempData = newData;
+            dispatch({type: "SUCCESS", data: newData});
+            onSuccess?.(newData, variables);
+
+            if (invalidateKeys) {
+                invalidateKeys.forEach(key => deleteCachedValue(key));
+            }
             
-            return data;
+            return newData;
         }
         
         catch(e: unknown) {
             tempError = e as TError;
-            setError(tempError);
+            dispatch({type: "ERROR", error: tempError});
             onError?.(tempError, variables);
-            setStatus("ERROR");
             throw tempError;
         }
         
@@ -68,11 +75,7 @@ export default function useMutation<TData, TError, TVariables>(
 
     const mutateAsync = (variables: TVariables) => execute(variables);
     
-    const reset = () => {
-        setStatus("IDLE");
-        setData(null);
-        setError(null);
-    }
+    const reset = () => dispatch({type: "RESET", status: "IDLE"})
 
     return { mutate, mutateAsync, status, data, error, reset };
 }

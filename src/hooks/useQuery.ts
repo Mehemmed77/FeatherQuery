@@ -1,10 +1,11 @@
 import { useCallback, useContext, useEffect, useReducer, useRef } from 'react';
 import QueryContext from '../context/QueryContext';
 import usePolling from '../utils/usePolling';
-import { queryReducer } from '../reducers/QueryReducer';
+import { queryReducer } from '../reducers/queryReducer';
 import { isDataStale, updateCache } from '../utils/cacheUtils';
 import { fetchFresh } from '../utils/fetchFresh';
 import useRequestIdTracker from '../utils/useLastRequestId';
+import useQueryClient from '../utils/useQueryClient';
 
 export default function useQuery<T = unknown>(
     key: string,
@@ -25,7 +26,7 @@ export default function useQuery<T = unknown>(
     });
 
     const { data, error, status } = state;
-    const { setCachedValue, getCachedValue } = useContext(QueryContext);
+    const { setCachedValue, getCachedValue } = useQueryClient();
     const { lastRequestId, incrementAndGet } = useRequestIdTracker();
 
     // Refs
