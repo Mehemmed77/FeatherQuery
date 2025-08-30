@@ -1,7 +1,7 @@
 import { CacheEntry, setCachedValueType } from '../types/CacheTypes';
 
 export function updateCache<T>(
-    key: string,
+    key: string[],
     data: T,
     staleTime: number,
     setCachedValue: setCachedValueType

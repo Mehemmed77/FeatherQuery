@@ -4,7 +4,7 @@ import { updateCache } from './cacheUtils';
 export async function fetchFresh<T>(
     fetcher: (signal: AbortSignal) => Promise<T>,
     abortController: AbortController,
-    key: string,
+    key: any[],
     staleTime: number,
     currentRequestId: number,
     lastRequestId: number,

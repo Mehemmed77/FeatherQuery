@@ -25,13 +25,13 @@ type MutateCallbacks<TData, TError extends Error, TVariables> = {
 export type MutateOptions<TData, TError extends Error, TVariables> =
     | ({
           mutateFn: (variables: TVariables) => Promise<TData>;
-          invalidateKeys?: string[];
+          invalidateKeys?: any[];
           url?: never;
           method?: never;
           headers?: never;
       } & MutateCallbacks<TData, TError, TVariables>)
     | ({
-          invalidateKeys?: string[];
+          invalidateKeys?: any[];
           url: string;
           method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
           mutateFn?: never;

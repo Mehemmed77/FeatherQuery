@@ -8,7 +8,7 @@ import useRequestIdTracker from '../utils/useLastRequestId';
 import useQueryClient from '../utils/useQueryClient';
 
 export default function useQuery<T = unknown>(
-    key: string,
+    key: any[],
     fetcher: (signal: AbortSignal) => Promise<T>,
     options?: {
         pollInterval?: number;
