@@ -1,26 +1,27 @@
 import { CacheEntry } from "./types/CacheTypes";
+import hashKey from "./utils/hashKey";
 
-const globalCache: Record<string, CacheEntry<unknown>> = {};
+const globalCache: Map<string, CacheEntry<unknown>> = new Map();
 
-export function getCachedValue<T>(key: string): CacheEntry<T> | undefined {
-    return globalCache[key] as CacheEntry<T> | undefined;
+export function getCachedValue<T>(key: unknown): CacheEntry<T> | undefined {
+    return globalCache.get(hashKey(key)) as CacheEntry<T> | undefined;
 };
 
-export function setCachedValue<T>(key: string, entry: CacheEntry<T>): void {
-    globalCache[key] = entry;
+export function setCachedValue<T>(key: unknown, entry: CacheEntry<T>): void {
+    globalCache.set(hashKey(key),entry);
 }
 
-export function deleteCachedValue(key?: string) {
-    if(key) delete globalCache[key];
-    else Object.keys(globalCache).forEach(k => delete globalCache[k]);
+export function deleteCachedValue(key?: unknown) {
+    if(key) globalCache.delete(hashKey(key));
+    else {
+        globalCache.clear();
+    }
 }
 
 export default function startCacheGC(interval: number, defaultCacheTime: number) {
     return setInterval(() => {
-        Object.entries(globalCache).forEach(([key, value]) => {
-            if(Date.now() - value.updatedAt > defaultCacheTime) {
-                delete globalCache[key];
-            }
-        });
+        for (const [key, value] of globalCache.entries()) {
+            if (Date.now() - value.updatedAt > defaultCacheTime) globalCache.delete(key);
+        }
     }, interval);
 }
