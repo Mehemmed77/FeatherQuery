@@ -5,7 +5,7 @@ export default function usePolling(
     pollInterval: number,
     requestInFlightRef: React.RefObject<boolean>
 ) {
-    const intervalId = useRef<number | null>(null);
+    const intervalId = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (pollInterval > 0) {

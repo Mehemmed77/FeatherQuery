@@ -1,11 +1,11 @@
-import { useCallback, useContext, useEffect, useReducer, useRef } from 'react';
-import QueryContext from '../context/QueryContext';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import usePolling from '../utils/usePolling';
 import { queryReducer } from '../reducers/queryReducer';
 import { isDataStale, updateCache } from '../utils/cacheUtils';
 import { fetchFresh } from '../utils/fetchFresh';
 import useRequestIdTracker from '../utils/useLastRequestId';
 import useQueryClient from '../utils/useQueryClient';
+import memoizeKeys from '../utils/memoizeKeys';
 
 export default function useQuery<T = unknown>(
     key: any[],
@@ -25,9 +25,8 @@ export default function useQuery<T = unknown>(
         status: 'STATIC',
     });
 
-    const { data, error, status } = state;
     const { setCachedValue, getCachedValue } = useQueryClient();
-    const { lastRequestId, incrementAndGet } = useRequestIdTracker();
+    const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
     // Refs
     const hasFetchedOnce = useRef<number>(0);
@@ -36,16 +35,18 @@ export default function useQuery<T = unknown>(
 
     const {
         pollInterval,
-        staleTime = 0,
+        staleTime = 30_000,
         onSuccess,
         onError,
         onSettled,
     } = options ?? {};
-
+    
     const fetchData = async (isPolling?: boolean) => {
         if (hasFetchedOnce.current === 0 && !getCachedValue<T>(key))
             dispatch({ type: 'LOADING' });
-
+        
+        let tempError: Error | null;
+        
         try {
             if (abortControllerRef.current) abortControllerRef.current.abort();
             abortControllerRef.current = new AbortController();
@@ -59,7 +60,8 @@ export default function useQuery<T = unknown>(
             const cachedData = getCachedValue<T>(key);
 
             if (cachedData) {
-                dispatch({ type: 'SUCCESS', data: cachedData.data });
+                dispatch({ type: "REFETCH_START", cachedData: cachedData.data });
+                console.log(isPolling);
                 if (isPolling || isDataStale(cachedData, staleTime)) {
                     await fetchFresh(
                         fetcher,
@@ -67,7 +69,7 @@ export default function useQuery<T = unknown>(
                         key,
                         staleTime,
                         currentRequestId,
-                        lastRequestId,
+                        lastRequestIdRef.current,
                         setCachedValue,
                         dispatch,
                         onSuccess
@@ -76,12 +78,15 @@ export default function useQuery<T = unknown>(
             } else {
                 const newData = await fetcher(abortControllerRef.current.signal);
 
-                if (currentRequestId !== lastRequestId) return;
+                console.log(currentRequestId, lastRequestIdRef.current);
+                if (currentRequestId !== lastRequestIdRef.current) return;
+                console.log("salam");
 
                 dispatch({ type: 'SUCCESS', data: newData });
                 onSuccess?.(newData);
 
                 updateCache(key, newData, staleTime, setCachedValue);
+                console.log("SALAM");
             }
 
             hasFetchedOnce.current = 1;
@@ -90,24 +95,25 @@ export default function useQuery<T = unknown>(
             if (err instanceof Error && err.name !== 'AbortError') {
                 dispatch({ type: 'ERROR', error: err });
                 onError?.(err);
+                tempError = err;
                 requestInFlight.current = false;
             }
         } finally {
-            onSettled?.(getCachedValue<T>(key)?.data ?? null, error ?? null);
+            onSettled?.(getCachedValue<T>(key)?.data ?? null, tempError ?? null);
         }
     };
 
+    usePolling(fetchData, pollInterval ?? 0, requestInFlight);
+
     useEffect(() => {
         fetchData();
-
-        usePolling(fetchData, pollInterval ?? 0, requestInFlight);
 
         return () => {
             if (abortControllerRef.current) abortControllerRef.current.abort();
             hasFetchedOnce.current = 0;
         };
 
-    }, [key, fetcher]);
+    }, [memoizeKeys(key), fetcher]);
 
     const refetch = useCallback(async () => {
         if (abortControllerRef.current) {
@@ -116,10 +122,6 @@ export default function useQuery<T = unknown>(
         return fetchData();
     }, [key, fetcher]);
 
-    const isLoading = status === "LOADING";
-    const isFetching = status === "FETCHING";
-    const isError = status === "ERROR";
-    const isSuccess = status === "SUCCESS";
 
-    return { data, error, status,isSuccess, isLoading, isFetching, isError, refetch };
+    return { data: state.data, error: state.error, status: state.status, refetch };
 }

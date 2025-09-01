@@ -1,16 +1,16 @@
 import { useEffect, useRef } from "react";
 import { PropsWithChildren } from "react";
-import startCacheGC from "../cache";
+import startCacheGC, { getAll } from "../cache";
 import QueryContext from "./QueryContext";
 import { getCachedValue, deleteCachedValue, setCachedValue } from "../cache";
 
 interface QueryProviderProps {
-    interval: number;
-    defaultCacheTime: number;
+    interval?: number;
+    defaultCacheTime?: number;
 }
 
 const QueryProvider = ({interval = 60000, defaultCacheTime = 300000, children}: PropsWithChildren<QueryProviderProps>) => {
-    const intervalId = useRef<number | null>(null);
+    const intervalId = useRef<number | NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         intervalId.current = startCacheGC(interval, defaultCacheTime);
@@ -21,6 +21,18 @@ const QueryProvider = ({interval = 60000, defaultCacheTime = 300000, children}: 
         }
 
     }, [interval]);
+
+    useEffect(() => {
+        if (process.env.NODE_ENV !== "production") {
+            ( window as any ).featherCache = {
+                get: (key: unknown) => getCachedValue<any>(key),
+                getAll: () => getAll(),
+                delete: (key: unknown[]) => deleteCachedValue(key),
+                clear: () => deleteCachedValue(),
+            }
+            console.log("🔍 FeatherQuery cache debugger is available: window.featherCache");
+        }
+    }, []);
 
     return (
         <QueryContext.Provider value={{setCachedValue, deleteCachedValue, getCachedValue}}>

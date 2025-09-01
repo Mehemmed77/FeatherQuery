@@ -28,6 +28,10 @@ export function deleteCachedValue(prefix?: unknown[], exact = false) {
     else globalCache.clear();
 }
 
+export function getAll<T>(): [string, CacheEntry<T>][] {
+    return Array.from(globalCache.entries()) as [string, CacheEntry<T>][];
+}
+
 export default function startCacheGC(interval: number, defaultCacheTime: number) {
     return setInterval(() => {
         for (const [key, value] of globalCache.entries()) {
