@@ -8,7 +8,7 @@ export default function useMutation<TData, TError extends Error, TVariables>(
     options: MutateOptions<TData, TError, TVariables>
 ): MutateFn<TData, TError, TVariables> {
     const { mutateFn, url, method, headers, onSuccess, onError, onSettled, invalidateKeys } = options;
-    const { lastRequestId, incrementAndGet } = useRequestIdTracker();
+    const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
     let executeMutation: (variables: TVariables) => Promise<TData>;
 
@@ -31,7 +31,7 @@ export default function useMutation<TData, TError extends Error, TVariables>(
         {data: null,error: null,status: "IDLE"}
     )
 
-    const { deleteCachedValue } = useQueryClient();
+    const { cache } = useQueryClient();
 
     const { data, status } = state;
     const error = state.error as TError;
@@ -46,14 +46,14 @@ export default function useMutation<TData, TError extends Error, TVariables>(
         try {
             const newData = await executeMutation(variables);
     
-            if (tempRequestID !== lastRequestId) return;
+            if (tempRequestID !== lastRequestIdRef.current) return;
 
             tempData = newData;
             dispatch({type: "SUCCESS", data: newData});
             onSuccess?.(newData, variables);
 
             if (invalidateKeys) {
-                invalidateKeys.forEach(key => deleteCachedValue(key));
+                invalidateKeys.forEach(key => cache.delete(key));
             }
             
             return newData;
@@ -69,7 +69,7 @@ export default function useMutation<TData, TError extends Error, TVariables>(
         finally {
             onSettled?.(tempData, tempError, variables);
         }
-    }, [executeMutation]);
+    }, [executeMutation, onSuccess, onError, onSettled, invalidateKeys]);
     
     const mutate = (variables: TVariables) => execute(variables).catch(() => {});
 

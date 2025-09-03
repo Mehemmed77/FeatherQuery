@@ -25,7 +25,7 @@ export default function useQuery<T = unknown>(
         status: 'STATIC',
     });
 
-    const { setCachedValue, getCachedValue } = useQueryClient();
+    const { cache } = useQueryClient();
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
     // Refs
@@ -42,7 +42,7 @@ export default function useQuery<T = unknown>(
     } = options ?? {};
     
     const fetchData = async (isPolling?: boolean) => {
-        if (hasFetchedOnce.current === 0 && !getCachedValue<T>(key))
+        if (hasFetchedOnce.current === 0 && !cache.get<T>(key))
             dispatch({ type: 'LOADING' });
         
         let tempError: Error | null;
@@ -57,7 +57,7 @@ export default function useQuery<T = unknown>(
 
             requestInFlight.current = true;
 
-            const cachedData = getCachedValue<T>(key);
+            const cachedData = cache.get<T>(key);
 
             if (cachedData) {
                 dispatch({ type: "REFETCH_START", cachedData: cachedData.data });
@@ -70,7 +70,7 @@ export default function useQuery<T = unknown>(
                         staleTime,
                         currentRequestId,
                         lastRequestIdRef.current,
-                        setCachedValue,
+                        cache,
                         dispatch,
                         onSuccess
                     );
@@ -78,14 +78,12 @@ export default function useQuery<T = unknown>(
             } else {
                 const newData = await fetcher(abortControllerRef.current.signal);
 
-                console.log(currentRequestId, lastRequestIdRef.current);
                 if (currentRequestId !== lastRequestIdRef.current) return;
-                console.log("salam");
 
                 dispatch({ type: 'SUCCESS', data: newData });
                 onSuccess?.(newData);
 
-                updateCache(key, newData, staleTime, setCachedValue);
+                updateCache(key, newData, staleTime, cache);
                 console.log("SALAM");
             }
 
@@ -99,7 +97,7 @@ export default function useQuery<T = unknown>(
                 requestInFlight.current = false;
             }
         } finally {
-            onSettled?.(getCachedValue<T>(key)?.data ?? null, tempError ?? null);
+            onSettled?.(cache.get<T>(key)?.data ?? null, tempError ?? null);
         }
     };
 

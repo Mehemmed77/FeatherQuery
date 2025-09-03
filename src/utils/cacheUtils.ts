@@ -1,13 +1,14 @@
-import { CacheEntry, setCachedValueType } from '../types/CacheTypes';
+import { Cache } from '../cache';
+import { CacheEntry } from '../types/CacheTypes';
 
 export function updateCache<T>(
     key: string[],
     data: T,
     staleTime: number,
-    setCachedValue: setCachedValueType
+    cache: Cache 
 ) {
     const now = Date.now();
-    setCachedValue<T>(key, {
+    cache.set<T>(key, {
         data,
         updatedAt: now,
         cacheTime: staleTime ? staleTime + now : Infinity,

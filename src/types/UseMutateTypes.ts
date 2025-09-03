@@ -22,6 +22,10 @@ type MutateCallbacks<TData, TError extends Error, TVariables> = {
     ) => void;
 };
 
+type OptionalCallbacks = {
+    
+}
+
 export type MutateOptions<TData, TError extends Error, TVariables> =
     | ({
           mutateFn: (variables: TVariables) => Promise<TData>;

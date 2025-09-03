@@ -1,3 +1,4 @@
+import { Cache } from '../cache';
 import { QueryAction } from '../reducers/queryReducer';
 import { updateCache } from './cacheUtils';
 
@@ -8,14 +9,14 @@ export async function fetchFresh<T>(
     staleTime: number,
     currentRequestId: number,
     lastRequestId: number,
-    setCachedValue: any,
+    cache: Cache,
     dispatch: React.Dispatch<QueryAction<T>>,
     onSuccess?: (data: T) => any
 ) {
     const newData = await fetcher(abortController.signal);
     if (currentRequestId !== lastRequestId) return;
 
-    updateCache(key, newData, staleTime, setCachedValue);
+    updateCache(key, newData, staleTime, cache);
     dispatch({ type: 'SUCCESS', data: newData });
     onSuccess?.(newData);
 }

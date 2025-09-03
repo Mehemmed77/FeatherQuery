@@ -1,7 +1,5 @@
-import { deleteCachedValueType, getCachedValueType, setCachedValueType } from "./CacheTypes"
+import { Cache } from "../cache"
 
 export interface ContextType {
-    getCachedValue: getCachedValueType;
-    setCachedValue: setCachedValueType
-    deleteCachedValue: deleteCachedValueType
+    cache: Cache
 }
