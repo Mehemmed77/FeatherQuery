@@ -1,5 +1,6 @@
-import { Cache } from "../cache"
+import { Cache, PermanentCache } from "../cache"
 
 export interface ContextType {
-    cache: Cache
+    cache: Cache,
+    permanentCache: PermanentCache
 }

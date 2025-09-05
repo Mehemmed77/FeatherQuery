@@ -1,3 +1,4 @@
+import { PermanentCache } from '../cache';
 import { STATUS } from './queryStatusType';
 
 export interface MutateFn<TData, TError extends Error, TVariables> {
@@ -9,10 +10,15 @@ export interface MutateFn<TData, TError extends Error, TVariables> {
     data: TData | null;
     error: TError | null;
 
+    isLoading: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    isIdle: boolean;
+
     reset: () => void;
 }
 
-type MutateCallbacks<TData, TError extends Error, TVariables> = {
+type Options<TData, TError extends Error, TVariables> = {
     onSuccess?: (data: TData, variables: TVariables) => void;
     onError?: (error: TError, variables: TVariables) => void;
     onSettled?: (
@@ -20,11 +26,12 @@ type MutateCallbacks<TData, TError extends Error, TVariables> = {
         error: TError | null,
         variables: TVariables
     ) => void;
-};
 
-type OptionalCallbacks = {
-    
-}
+    optimisticUpdate?: (permanentCache: PermanentCache, variables: TVariables) => any;
+    rollback?: (permanentCache: PermanentCache, variables: TVariables) => any;
+
+
+};
 
 export type MutateOptions<TData, TError extends Error, TVariables> =
     | ({
@@ -33,11 +40,11 @@ export type MutateOptions<TData, TError extends Error, TVariables> =
           url?: never;
           method?: never;
           headers?: never;
-      } & MutateCallbacks<TData, TError, TVariables>)
+      } & Options<TData, TError, TVariables>)
     | ({
           invalidateKeys?: any[];
           url: string;
           method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
           mutateFn?: never;
           headers?: HeadersInit;
-      } & MutateCallbacks<TData, TError, TVariables>);
+      } & Options<TData, TError, TVariables>);

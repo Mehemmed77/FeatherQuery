@@ -114,12 +114,9 @@ export default function useQuery<T = unknown>(
     }, [memoizeKeys(key), fetcher]);
 
     const refetch = useCallback(async () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         return fetchData();
     }, [key, fetcher]);
-
 
     return { data: state.data, error: state.error, status: state.status, refetch };
 }

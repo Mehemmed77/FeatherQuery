@@ -3,46 +3,66 @@ import areArraysEqualEvery from './utils/areArraysEqual';
 import hashKey from './utils/hashKey';
 import isPrefix from './utils/isPrefix';
 
-const globalCache: Map<string, CacheEntry<unknown>> = new Map();
-
 export class Cache {
+    private cache: Map<string, CacheEntry<unknown>> = new Map(); 
+
     get<T>(key: unknown): CacheEntry<T> | undefined {
-        return globalCache.get(hashKey(key)) as CacheEntry<T> | undefined;
+        return this.cache.get(hashKey(key)) as CacheEntry<T> | undefined;
     }
 
     getAll<T>(): [string, CacheEntry<T>][] {
-        return Array.from(globalCache.entries()) as [string, CacheEntry<T>][];
+        return Array.from(this.cache.entries()) as [string, CacheEntry<T>][];
     }
 
     set<T>(key: unknown, entry: CacheEntry<T>): void {
-        globalCache.set(hashKey(key), entry);
+        this.cache.set(hashKey(key), entry);
     }
 
     delete(prefix: unknown[], exact = false) {
-        for (const key of globalCache.keys()) {
+        for (const key of this.cache.keys()) {
             const full = JSON.parse(key) as unknown[];
             if (exact && areArraysEqualEvery(prefix, full)) {
-                globalCache.delete(key);
+                this.cache.delete(key);
                 break;
             }
 
-            if (!exact && isPrefix(prefix, full)) globalCache.delete(key);
+            if (!exact && isPrefix(prefix, full)) this.cache.delete(key);
         }
     }
 
     deleteAll() {
-        globalCache.clear();
+        this.cache.clear();
+    }
+
+    startCacheGC(interval: number, defaultCacheTime: number) {
+        return setInterval(() => {
+            for(const [key, value] of this.cache.entries()) {
+                if(Date.now() - value.updatedAt > defaultCacheTime) {
+                    this.cache.delete(key);
+                }
+            }
+
+        }, interval);
     }
 }
 
-export default function startCacheGC(
-    interval: number,
-    defaultCacheTime: number
-) {
-    return setInterval(() => {
-        for (const [key, value] of globalCache.entries()) {
-            if (Date.now() - value.updatedAt > defaultCacheTime)
-                globalCache.delete(key);
-        }
-    }, interval);
+export class PermanentCache {
+    private permanentCache: Map<string, CacheEntry<unknown>> = new Map();
+
+    get<T>(key: unknown): CacheEntry<T> | undefined {
+        return this.permanentCache.get(hashKey(key)) as CacheEntry<T> | undefined;
+    }
+
+    getAll<T>(): [string, CacheEntry<T>][] {
+        return Array.from(this.permanentCache.entries()) as [string, CacheEntry<T>][];
+    }
+
+    set<T>(key: unknown, entry: CacheEntry<T>): void {
+        this.permanentCache.set(hashKey(key), entry);
+    }
+
+    delete(key: unknown): void {
+        this.permanentCache.delete(hashKey(key));
+    }
 }
+

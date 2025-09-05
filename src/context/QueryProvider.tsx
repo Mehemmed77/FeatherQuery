@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { PropsWithChildren } from "react";
-import startCacheGC, { Cache } from "../cache";
+import { Cache, PermanentCache } from "../cache";
 import QueryContext from "./QueryContext";
 
 interface QueryProviderProps {
@@ -11,9 +11,10 @@ interface QueryProviderProps {
 const QueryProvider = ({interval = 60000, defaultCacheTime = 300000, children}: PropsWithChildren<QueryProviderProps>) => {
     const intervalId = useRef<number | NodeJS.Timeout | null>(null);
     const cache = new Cache();
+    const permanentCache = new PermanentCache();
 
     useEffect(() => {
-        intervalId.current = startCacheGC(interval, defaultCacheTime);
+        intervalId.current = cache.startCacheGC(interval, defaultCacheTime);
 
         return () => {
             if (intervalId.current) clearInterval(intervalId.current);
@@ -35,7 +36,7 @@ const QueryProvider = ({interval = 60000, defaultCacheTime = 300000, children}: 
     }, []);
 
     return (
-        <QueryContext.Provider value={{ cache }}>
+        <QueryContext.Provider value={{ cache, permanentCache }}>
             {children}
         </QueryContext.Provider>
     );
