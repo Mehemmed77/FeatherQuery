@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { PropsWithChildren } from 'react';
-import { Cache } from '../cache/cache';
+import { Cache } from '../cache/VolatileCache';
 import QueryContext from './QueryContext';
 
 interface QueryProviderProps {
@@ -10,7 +10,7 @@ interface QueryProviderProps {
 
 const QueryProvider = ({
     interval = 6000,
-    defaultCacheTime = 3000 ,
+    defaultCacheTime = 3000,
     children,
 }: PropsWithChildren<QueryProviderProps>) => {
     const intervalId = useRef<number | NodeJS.Timeout | null>(null);

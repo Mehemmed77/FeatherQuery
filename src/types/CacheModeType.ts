@@ -1,1 +1,1 @@
-export type CacheMode = "permanent" | "volatile";
+export type CacheMode = "permanent" | "session" | "volatile";

@@ -1,4 +1,4 @@
-import { Cache } from '../cache/cache';
+import { CacheMode } from './CacheModeType';
 import { STATUS } from './queryStatusType';
 
 export interface MutateFn<TResponse, TError extends Error, TVariables> {
@@ -27,13 +27,11 @@ type Options<TResponse, TError extends Error, TVariables> = {
         variables: TVariables
     ) => void;
 
-    optimisticUpdate?: (
-        cache: Cache,
-        variables: TVariables
-    ) => any;
+    optimisticUpdate?: (cache: Cache, variables: TVariables) => any;
     rollback?: (cache: Cache, variables: TVariables) => any;
     retries?: number;
     retryDelay?: (attempt: number) => number;
+    cacheMode?: CacheMode;
 };
 
 export type MutateOptions<TResponse, TError extends Error, TVariables> =

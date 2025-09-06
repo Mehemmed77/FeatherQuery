@@ -1,4 +1,4 @@
-import { Cache } from '../cache/cache';
+import { VolatileCache } from '../cache/VolatileCache';
 import { QueryAction } from '../reducers/queryReducer';
 import { updateCache } from './cacheUtils';
 
@@ -9,7 +9,7 @@ export async function fetchFresh<T>(
     staleTime: number,
     currentRequestId: number,
     lastRequestId: number,
-    cache: Cache,
+    cache: VolatileCache,
     dispatch: React.Dispatch<QueryAction<T>>,
     onSuccess?: (data: T) => any
 ) {

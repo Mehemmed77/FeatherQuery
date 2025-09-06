@@ -20,6 +20,7 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
         rollback,
         retries = 0,
         retryDelay = (attempt: number) => 1000 * 2 ** (attempt - 1),
+        cacheMode
     } = options;
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 

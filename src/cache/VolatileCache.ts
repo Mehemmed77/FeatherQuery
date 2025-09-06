@@ -3,7 +3,7 @@ import areArraysEqualEvery from '../utils/areArraysEqual';
 import hashKey from '../utils/hashKey';
 import isPrefix from '../utils/isPrefix';
 
-export class Cache {
+export class VolatileCache {
     private cache: Map<string, CacheEntry<unknown>> = new Map();
 
     get<T>(key: unknown): CacheEntry<T> | undefined {
@@ -38,7 +38,6 @@ export class Cache {
         return setInterval(() => {
             for (const [key, value] of this.cache.entries()) {
                 if (Date.now() - value.updatedAt > defaultCacheTime) {
-                    console.log("YES");
                     this.cache.delete(key);
                 }
             }

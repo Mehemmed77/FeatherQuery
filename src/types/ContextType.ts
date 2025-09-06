@@ -1,5 +1,6 @@
-import { Cache } from '../cache/cache';
+import { StorageCache } from '../cache/StorageCache';
+import { VolatileCache } from '../cache/VolatileCache';
 
 export interface ContextType {
-    cache: Cache;
+    cache: VolatileCache | StorageCache;
 }

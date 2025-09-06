@@ -1,4 +1,4 @@
-import { Cache } from '../cache/cache';
+import { Cache } from '../cache/VolatileCache';
 import { CacheEntry } from '../types/CacheTypes';
 
 export function updateCache<T>(
@@ -19,7 +19,7 @@ export function isDataStale<T>(
     cached: CacheEntry<T> | undefined,
     staleTime: number
 ) {
-    const now = Date.now()
-    console.log(cached, now > cached.updatedAt + staleTime)
+    const now = Date.now();
+    console.log(cached, now > cached.updatedAt + staleTime);
     return cached ? now > cached.updatedAt + staleTime : true;
 }
