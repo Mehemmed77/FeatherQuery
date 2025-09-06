@@ -2,6 +2,7 @@ import { STATUS } from '../types/queryStatusType';
 
 interface QueryState<T, E = Error> {
     data: T | null;
+    response: T | null;
     error: E | null;
     status: STATUS;
 }
@@ -14,6 +15,7 @@ export type QueryAction<T, E = Error> =
     | { type: 'ERROR'; error: E }
     | { type: "RESET"; status: STATUS  }
     | { type: "REFETCH_START", cachedData: T }
+    | { type: "SUCCESS_RESPONSE", response: T }
 
 export function queryReducer<T, E extends Error = Error>(state: QueryState<T, E>, action: QueryAction<T, E>): QueryState<T> {
     switch (action.type) {
@@ -27,7 +29,12 @@ export function queryReducer<T, E extends Error = Error>(state: QueryState<T, E>
 
         case "SUCCESS": {
             const data = action.data;
-            return {data: data, error: null, status: "SUCCESS"};
+            return {...state, data: data, error: null, status: "SUCCESS"};
+        }
+
+        case "SUCCESS_RESPONSE": {
+            const response = action.response;
+            return {...state, response: response};
         }
 
         case "REFETCH_START": {
@@ -41,11 +48,11 @@ export function queryReducer<T, E extends Error = Error>(state: QueryState<T, E>
         }
 
         case "RESET": {
-            return {data: null, error: null, status: action.status}
+            return {data: null, error: null, response: null, status: action.status}
         }
 
         case "STATIC": {
-            return {data: null, error: null, status: "STATIC"}
+            return {data: null, error: null, response: null, status: "STATIC"}
         } 
     }
 }

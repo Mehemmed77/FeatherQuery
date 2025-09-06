@@ -2,6 +2,6 @@ export type CacheEntry<T> = {
     data: T;
     updatedAt: number;
     cacheTime: number;
-    userSet?: boolean; 
+    permanent?: boolean; 
     error?: Error;
 };

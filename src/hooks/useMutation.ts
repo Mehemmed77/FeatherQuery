@@ -4,9 +4,9 @@ import useRequestIdTracker from '../utils/useLastRequestId';
 import { queryReducer } from '../reducers/queryReducer';
 import useQueryClient from '../utils/useQueryClient';
 
-export default function useMutation<TData, TError extends Error, TVariables>(
-    options: MutateOptions<TData, TError, TVariables>
-): MutateFn<TData, TError, TVariables> {
+export default function useMutation<TResponse, TError extends Error, TVariables>(
+    options: MutateOptions<TResponse, TError, TVariables>
+): MutateFn<TResponse, TError, TVariables> {
     const {
         mutateFn,
         url,
@@ -18,10 +18,12 @@ export default function useMutation<TData, TError extends Error, TVariables>(
         invalidateKeys,
         optimisticUpdate,
         rollback,
+        retries = 0,
+        retryDelay = (attempt: number) => 1000 * 2 ** (attempt - 1),
     } = options;
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
-    let executeMutation: (variables: TVariables) => Promise<TData>;
+    let executeMutation: (variables: TVariables) => Promise<TResponse>;
 
     if (mutateFn) executeMutation = mutateFn;
     else if (url && method) {
@@ -34,90 +36,128 @@ export default function useMutation<TData, TError extends Error, TVariables>(
                 method: method,
                 body: JSON.stringify(variables),
                 headers: requestHeaders,
-            }).then((data) => data.json() as Promise<TData>);
+            }).then((data) => data.json() as Promise<TResponse>);
         };
     } else {
         throw new Error('You must provide either mutateFn or url+method');
     }
 
     // STATES
-    const [state, dispatch] = useReducer(queryReducer<TData, TError>, {
+    const [state, dispatch] = useReducer(queryReducer<TResponse, TError>, {
         data: null,
+        response: null,
         error: null,
         status: 'IDLE',
     });
 
-    const { cache, permanentCache } = useQueryClient();
+    const { cache } = useQueryClient();
     const hasOptimisticallyUpdated = useRef<boolean>(false);
-    const isUnmounted = useRef<boolean>(false);
+    const retriesRef = useRef<number>(retries);
+    const retryTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
+    const isMounted = useRef<boolean>(true);
 
     const execute = useCallback(
-        async (variables: TVariables): Promise<TData> => {
-            let tempData: TData | null = null;
+        async (variables: TVariables): Promise<TResponse> => {
+            let tempResponse: TResponse | null = null;
             let tempError: TError | null = null;
 
-            if (isUnmounted.current) dispatch({ type: 'LOADING' });
+            if (!isMounted.current) return;
+
+            dispatch({ type: 'LOADING' });
             const tempRequestID = incrementAndGet();
 
             try {
-                if(optimisticUpdate) {
-                    optimisticUpdate(permanentCache, variables);
+                if (optimisticUpdate) {
+                    optimisticUpdate(cache, variables);
                     hasOptimisticallyUpdated.current = true;
-                };
-
-                const newData = await executeMutation(variables);
+                }
+                
+                const response = await executeMutation(variables);
 
                 if (tempRequestID !== lastRequestIdRef.current) return;
 
-                tempData = newData;
-                if(isUnmounted.current) dispatch({ type: 'SUCCESS', data: newData });
+                tempResponse = response;
+                dispatch({ type: "SUCCESS_RESPONSE", response: response });
 
-                onSuccess?.(newData, variables);
+                onSuccess?.(response, variables);
 
                 if (invalidateKeys) {
                     invalidateKeys.forEach((key) => cache.delete(key));
                 }
 
-                return newData;
-
+                return response;
             } catch (e: unknown) {
-                tempError = e as TError;
-                if(isUnmounted.current) dispatch({ type: 'ERROR', error: tempError });
+                if (e instanceof Error && e.name !== 'AbortError') {
+                    tempError = e as TError;
 
-                onError?.(tempError, variables);
+                    if (retriesRef.current > 0) {
+                        const attempts = retries - retriesRef.current + 1;
+                        retriesRef.current = retriesRef.current - 1;
 
-                if(rollback && hasOptimisticallyUpdated.current) {
-                    rollback(permanentCache, variables);
-                    hasOptimisticallyUpdated.current = false;
+                        retryTimeoutRef.current = setTimeout(
+                            () => execute(variables),
+                            retryDelay(attempts)
+                        );
+
+                        onError?.(tempError, variables);
+
+                        return;
+                    }
+
+                    dispatch({ type: 'ERROR', error: tempError });
+
+                    if (rollback && hasOptimisticallyUpdated.current) {
+                        rollback(cache, variables);
+                        hasOptimisticallyUpdated.current = false;
+                    }
+
+                    throw tempError;
                 }
-
-                throw tempError;    
             } finally {
-                onSettled?.(tempData, tempError, variables);
+                onSettled?.(tempResponse, tempError, variables);
             }
         },
         [executeMutation, onSuccess, onError, onSettled, invalidateKeys]
     );
 
+    const runMutation = useCallback((variables: TVariables) => {
+        if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+        retriesRef.current = retries;
+        return execute(variables);
+
+    }, [execute, retries]);
+
     useEffect(() => {
         return () => {
-            isUnmounted.current = true;
-        }
+            if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+            // isMounted.current = false;
+        };
     }, []);
 
     const mutate = (variables: TVariables) =>
-        execute(variables).catch(() => {});
+        runMutation(variables).catch(() => {});
 
-    const mutateAsync = (variables: TVariables) => execute(variables);
+    const mutateAsync = (variables: TVariables) => runMutation(variables);
 
     const reset = () => dispatch({ type: 'RESET', status: 'IDLE' });
 
-    const { data, status } = state;
+    const { response, status } = state;
     const error = state.error as TError;
-    const isLoading = status === "LOADING";
-    const isError = status === "ERROR";
-    const isSuccess = status === "SUCCESS";
-    const isIdle = status === "IDLE";
+    const isLoading = status === 'LOADING';
+    const isError = status === 'ERROR';
+    const isSuccess = status === 'SUCCESS';
+    const isIdle = status === 'IDLE';
 
-    return { mutate, mutateAsync, status, data, error, isLoading, isError, isIdle, isSuccess, reset };
+    return {
+        mutate,
+        mutateAsync,
+        status,
+        response,
+        error,
+        isLoading,
+        isError,
+        isIdle,
+        isSuccess,
+        reset,
+    };
 }

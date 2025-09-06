@@ -20,6 +20,7 @@ export default function useQuery<T = unknown>(
 ) {
     // States
     const [state, dispatch] = useReducer(queryReducer<T>, {
+        response: null,
         data: null,
         error: null,
         status: 'STATIC',
@@ -60,9 +61,10 @@ export default function useQuery<T = unknown>(
             const cachedData = cache.get<T>(key);
 
             if (cachedData) {
-                dispatch({ type: "REFETCH_START", cachedData: cachedData.data });
-                console.log(isPolling);
+                
                 if (isPolling || isDataStale(cachedData, staleTime)) {
+                    dispatch({ type: "REFETCH_START", cachedData: cachedData.data });
+
                     await fetchFresh(
                         fetcher,
                         abortControllerRef.current,
@@ -75,6 +77,11 @@ export default function useQuery<T = unknown>(
                         onSuccess
                     );
                 }
+
+                else {
+                    dispatch({ type: "SUCCESS", data: cachedData.data })
+                }
+
             } else {
                 const newData = await fetcher(abortControllerRef.current.signal);
 
@@ -84,7 +91,6 @@ export default function useQuery<T = unknown>(
                 onSuccess?.(newData);
 
                 updateCache(key, newData, staleTime, cache);
-                console.log("SALAM");
             }
 
             hasFetchedOnce.current = 1;

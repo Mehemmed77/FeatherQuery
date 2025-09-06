@@ -1,4 +1,4 @@
-import { Cache } from '../cache';
+import { Cache } from '../cache/cache';
 import { QueryAction } from '../reducers/queryReducer';
 import { updateCache } from './cacheUtils';
 

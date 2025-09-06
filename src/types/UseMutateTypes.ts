@@ -1,13 +1,13 @@
-import { PermanentCache } from '../cache';
+import { Cache } from '../cache/cache';
 import { STATUS } from './queryStatusType';
 
-export interface MutateFn<TData, TError extends Error, TVariables> {
+export interface MutateFn<TResponse, TError extends Error, TVariables> {
     mutate: (variables: TVariables) => void;
-    mutateAsync: (variables: TVariables) => Promise<TData>;
+    mutateAsync: (variables: TVariables) => Promise<TResponse>;
 
     status: STATUS;
 
-    data: TData | null;
+    response: TResponse | null;
     error: TError | null;
 
     isLoading: boolean;
@@ -18,33 +18,36 @@ export interface MutateFn<TData, TError extends Error, TVariables> {
     reset: () => void;
 }
 
-type Options<TData, TError extends Error, TVariables> = {
-    onSuccess?: (data: TData, variables: TVariables) => void;
+type Options<TResponse, TError extends Error, TVariables> = {
+    onSuccess?: (response: TResponse, variables: TVariables) => void;
     onError?: (error: TError, variables: TVariables) => void;
     onSettled?: (
-        data: TData | null,
+        response: TResponse | null,
         error: TError | null,
         variables: TVariables
     ) => void;
 
-    optimisticUpdate?: (permanentCache: PermanentCache, variables: TVariables) => any;
-    rollback?: (permanentCache: PermanentCache, variables: TVariables) => any;
-
-
+    optimisticUpdate?: (
+        cache: Cache,
+        variables: TVariables
+    ) => any;
+    rollback?: (cache: Cache, variables: TVariables) => any;
+    retries?: number;
+    retryDelay?: (attempt: number) => number;
 };
 
-export type MutateOptions<TData, TError extends Error, TVariables> =
+export type MutateOptions<TResponse, TError extends Error, TVariables> =
     | ({
-          mutateFn: (variables: TVariables) => Promise<TData>;
+          mutateFn: (variables: TVariables) => Promise<TResponse>;
           invalidateKeys?: any[];
           url?: never;
           method?: never;
           headers?: never;
-      } & Options<TData, TError, TVariables>)
+      } & Options<TResponse, TError, TVariables>)
     | ({
           invalidateKeys?: any[];
           url: string;
           method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
           mutateFn?: never;
           headers?: HeadersInit;
-      } & Options<TData, TError, TVariables>);
+      } & Options<TResponse, TError, TVariables>);

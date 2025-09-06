@@ -1,0 +1,1 @@
+export type CacheMode = "permanent" | "volatile";

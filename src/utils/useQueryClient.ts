@@ -6,7 +6,6 @@ export default function useQueryClient() {
     if (!context) throw new Error("useQueryClient must be used within QueryProvider");
 
     return {
-        cache: context.cache,
-        permanentCache: context.permanentCache,        
+        cache: context.cache,     
     }
 }

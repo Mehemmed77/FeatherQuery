@@ -1,11 +1,11 @@
-import { Cache } from '../cache';
+import { Cache } from '../cache/cache';
 import { CacheEntry } from '../types/CacheTypes';
 
 export function updateCache<T>(
     key: string[],
     data: T,
     staleTime: number,
-    cache: Cache 
+    cache: Cache
 ) {
     const now = Date.now();
     cache.set<T>(key, {
@@ -15,6 +15,11 @@ export function updateCache<T>(
     });
 }
 
-export function isDataStale<T>(cached: CacheEntry<T> | undefined, staleTime: number) {
-    return cached ? Date.now() + cached.updatedAt > staleTime : true;
+export function isDataStale<T>(
+    cached: CacheEntry<T> | undefined,
+    staleTime: number
+) {
+    const now = Date.now()
+    console.log(cached, now > cached.updatedAt + staleTime)
+    return cached ? now > cached.updatedAt + staleTime : true;
 }
