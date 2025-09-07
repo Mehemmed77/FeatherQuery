@@ -1,6 +1,7 @@
-import { VolatileCache } from '../cache/VolatileCache';
-import { QueryAction } from '../reducers/queryReducer';
-import { updateCache } from './cacheUtils';
+import { StorageCache } from "../../cache/StorageCache";
+import { VolatileCache } from "../../cache/VolatileCache";
+import { QueryAction } from "../../core/QueryReducer";
+import { updateCache } from "../cache/cacheUtils";
 
 export async function fetchFresh<T>(
     fetcher: (signal: AbortSignal) => Promise<T>,
@@ -9,7 +10,7 @@ export async function fetchFresh<T>(
     staleTime: number,
     currentRequestId: number,
     lastRequestId: number,
-    cache: VolatileCache,
+    cache: VolatileCache | StorageCache,
     dispatch: React.Dispatch<QueryAction<T>>,
     onSuccess?: (data: T) => any
 ) {

@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
-import { MutateFn, MutateOptions } from '../types/UseMutateTypes';
-import useRequestIdTracker from '../utils/useLastRequestId';
-import { queryReducer } from '../reducers/queryReducer';
-import useQueryClient from '../utils/useQueryClient';
+import { Config, MutateFn, Options } from '../types/mutation';
+import useRequestIdTracker from '../utils/query/useLastRequestId';
+import { queryReducer } from '../core/QueryReducer';
+import useQueryClient from '../utils/query/useQueryClient';
 
-export default function useMutation<TResponse, TError extends Error, TVariables>(
-    options: MutateOptions<TResponse, TError, TVariables>
+export default function useMutation<
+    TResponse,
+    TError extends Error,
+    TVariables
+>(
+    config: Config<TResponse, TVariables>,
+    options?: Options<TResponse, TError, TVariables>
 ): MutateFn<TResponse, TError, TVariables> {
+    const { mutateFn, url, method, headers } = config;
     const {
-        mutateFn,
-        url,
-        method,
-        headers,
         onSuccess,
         onError,
         onSettled,
@@ -20,7 +22,7 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
         rollback,
         retries = 0,
         retryDelay = (attempt: number) => 1000 * 2 ** (attempt - 1),
-        cacheMode
+        cacheMode,
     } = options;
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
@@ -39,8 +41,6 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
                 headers: requestHeaders,
             }).then((data) => data.json() as Promise<TResponse>);
         };
-    } else {
-        throw new Error('You must provide either mutateFn or url+method');
     }
 
     // STATES
@@ -51,7 +51,7 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
         status: 'IDLE',
     });
 
-    const { cache } = useQueryClient();
+    const { cache } = useQueryClient(cacheMode);
     const hasOptimisticallyUpdated = useRef<boolean>(false);
     const retriesRef = useRef<number>(retries);
     const retryTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
@@ -72,13 +72,13 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
                     optimisticUpdate(cache, variables);
                     hasOptimisticallyUpdated.current = true;
                 }
-                
+
                 const response = await executeMutation(variables);
 
                 if (tempRequestID !== lastRequestIdRef.current) return;
 
                 tempResponse = response;
-                dispatch({ type: "SUCCESS_RESPONSE", response: response });
+                dispatch({ type: 'SUCCESS_RESPONSE', response: response });
 
                 onSuccess?.(response, variables);
 
@@ -121,12 +121,14 @@ export default function useMutation<TResponse, TError extends Error, TVariables>
         [executeMutation, onSuccess, onError, onSettled, invalidateKeys]
     );
 
-    const runMutation = useCallback((variables: TVariables) => {
-        if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-        retriesRef.current = retries;
-        return execute(variables);
-
-    }, [execute, retries]);
+    const runMutation = useCallback(
+        (variables: TVariables) => {
+            if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+            retriesRef.current = retries;
+            return execute(variables);
+        },
+        [execute, retries]
+    );
 
     useEffect(() => {
         return () => {

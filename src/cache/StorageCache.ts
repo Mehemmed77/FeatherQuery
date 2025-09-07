@@ -1,17 +1,23 @@
-import { CacheEntry } from "../types/CacheTypes";
-import areArraysEqualEvery from "../utils/areArraysEqual";
-import hashKey from "../utils/hashKey";
-import isPrefix from "../utils/isPrefix";
+import { CacheEntry } from '../types/cache';
+import {
+    areArraysEqualEvery,
+    hashKey,
+    isPrefix,
+} from '../utils/general/arrays';
 
 export class StorageCache {
     storage: Storage;
+
+    private storageMap: Map<string, CacheEntry<unknown>> = new Map();
 
     constructor(storage: Storage) {
         this.storage = storage;
     }
 
     get<T>(key: unknown): CacheEntry<T> | undefined {
-        return this.storage.get(hashKey(key)) as CacheEntry<T> | undefined;
+        return JSON.parse(this.storage.getItem(hashKey(key))) as
+            | CacheEntry<T>
+            | undefined;
     }
 
     getAll<T>(): [string, CacheEntry<T>][] {
@@ -19,7 +25,7 @@ export class StorageCache {
     }
 
     set<T>(key: unknown, entry: CacheEntry<T>): void {
-        this.storage.set(hashKey(key), entry);
+        this.storage.setItem(hashKey(key), JSON.stringify(entry));
     }
 
     delete(prefix: unknown[], exact = false) {

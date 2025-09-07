@@ -1,57 +1,55 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import usePolling from '../utils/usePolling';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import usePolling from '../utils/query/usePolling';
+import { FetchOptions } from '../types/fetch';
+import { queryReducer } from '../core/QueryReducer';
 
-export default function useFetch<T = unknown>(
-    url: string,
-    option?: { pollInterval?: number }
-) {
-    const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<Error | null>(null);
+export default function useFetch<T = unknown>(url: string, options?: FetchOptions) {
     const [trigger, setTrigger] = useState<number>(0);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const requestInFlight = useRef<boolean>(false);
 
-    const { pollInterval } = option ?? {};
+    const { pollInterval } = options ?? {};
+    const [state, dispatch] = useReducer(queryReducer<T>, {
+        data: null,
+        response: null,
+        error: null,
+        status: "IDLE",
+    });
 
     const fetchData = useCallback(async () => {
-            setLoading(true);
+        dispatch({ type: "LOADING" });
 
-            try {
-                if (abortControllerRef.current) abortControllerRef.current.abort();
-                abortControllerRef.current = new AbortController();
-                requestInFlight.current = true;
+        try {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+            abortControllerRef.current = new AbortController();
+            requestInFlight.current = true;
 
-                const response = await fetch(url, { signal: abortControllerRef.current.signal });
-                if(!response.ok) throw new Error(`Error occurred: ${response.status}`);
+            const response = await fetch(url, {
+                signal: abortControllerRef.current.signal,
+            });
+            if (!response.ok)
+                throw new Error(`Error occurred: ${response.status}`);
 
-                const json = response as T;
-                setError(null);
-                setLoading(false);
-                setData(json);
+            const json = await (response.json() as T);
+            dispatch({ type: "SUCCESS", data: json });
+        } catch (error) {
+            if (error instanceof Error && error.name !== 'AbortError') {
+                dispatch({ type: "ERROR", error: error });
             }
+        } finally {
+            requestInFlight.current = false;
+        }
 
-            catch (error) {
-                if (
-                    error instanceof Error &&
-                    error.name !== 'AbortError') {
-                    setData(null);
-                    setError(error);
-                }
-            } finally {
-                requestInFlight.current = false;
-            }
-        }, [url]);
+    }, [url]);
 
     useEffect(() => {
         fetchData();
         usePolling(fetchData, pollInterval ?? 0, requestInFlight);
 
         return () => {
-            if(abortControllerRef.current) abortControllerRef.current.abort();
+            if (abortControllerRef.current) abortControllerRef.current.abort();
         };
-
     }, [url, trigger, pollInterval]);
 
     const refetch = () => {
@@ -59,5 +57,12 @@ export default function useFetch<T = unknown>(
         setTrigger((prev) => prev + 1);
     };
 
-    return { data, loading, error, refetch };
+    return {
+        data: state.data,
+        status: state.status,
+        error: state.error,
+        isLoading: state.status === "LOADING",
+        isIdle: state.status === "IDLE",
+        refetch,
+    };
 }

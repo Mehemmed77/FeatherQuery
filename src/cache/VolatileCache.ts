@@ -1,4 +1,4 @@
-import { CacheEntry } from '../types/CacheTypes';
+import { CacheEntry } from '../types/cache';
 import areArraysEqualEvery from '../utils/areArraysEqual';
 import hashKey from '../utils/hashKey';
 import isPrefix from '../utils/isPrefix';

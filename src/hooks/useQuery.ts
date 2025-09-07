@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
-import usePolling from '../utils/usePolling';
-import { queryReducer } from '../reducers/queryReducer';
-import { isDataStale, updateCache } from '../utils/cacheUtils';
-import { fetchFresh } from '../utils/fetchFresh';
-import useRequestIdTracker from '../utils/useLastRequestId';
-import useQueryClient from '../utils/useQueryClient';
-import memoizeKeys from '../utils/memoizeKeys';
+import usePolling from '../utils/query/usePolling';
+import { isDataStale, updateCache } from '../utils/cache/cacheUtils';
+import useRequestIdTracker from '../utils/query/useLastRequestId';
+import memoizeKeys from '../utils/query/memoizeKeys';
+import { CacheMode } from '../types/cache';
+import { queryReducer } from '../core/QueryReducer';
+import useQueryClient from '../utils/query/useQueryClient';
+import { fetchFresh } from '../utils/query/fetchFresh';
+import { QueryOptions } from '../types/query';
 
 export default function useQuery<T = unknown>(
     key: any[],
     fetcher: (signal: AbortSignal) => Promise<T>,
-    options?: {
-        pollInterval?: number;
-        staleTime?: number;
-        onSuccess?: (data: T) => any;
-        onError?: (error: Error) => any;
-        onSettled?: (data: T | null, error: Error | null) => any;
-    }
+    options?: QueryOptions<T>
 ) {
     // States
     const [state, dispatch] = useReducer(queryReducer<T>, {
@@ -26,7 +22,6 @@ export default function useQuery<T = unknown>(
         status: 'STATIC',
     });
 
-    const { cache } = useQueryClient();
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
     // Refs
@@ -40,14 +35,17 @@ export default function useQuery<T = unknown>(
         onSuccess,
         onError,
         onSettled,
+        cacheMode,
     } = options ?? {};
-    
+
+    const { cache } = useQueryClient(cacheMode);
+
     const fetchData = async (isPolling?: boolean) => {
         if (hasFetchedOnce.current === 0 && !cache.get<T>(key))
             dispatch({ type: 'LOADING' });
-        
+
         let tempError: Error | null;
-        
+
         try {
             if (abortControllerRef.current) abortControllerRef.current.abort();
             abortControllerRef.current = new AbortController();
@@ -61,9 +59,11 @@ export default function useQuery<T = unknown>(
             const cachedData = cache.get<T>(key);
 
             if (cachedData) {
-                
                 if (isPolling || isDataStale(cachedData, staleTime)) {
-                    dispatch({ type: "REFETCH_START", cachedData: cachedData.data });
+                    dispatch({
+                        type: 'REFETCH_START',
+                        cachedData: cachedData.data,
+                    });
 
                     await fetchFresh(
                         fetcher,
@@ -76,14 +76,13 @@ export default function useQuery<T = unknown>(
                         dispatch,
                         onSuccess
                     );
+                } else {
+                    dispatch({ type: 'SUCCESS', data: cachedData.data });
                 }
-
-                else {
-                    dispatch({ type: "SUCCESS", data: cachedData.data })
-                }
-
             } else {
-                const newData = await fetcher(abortControllerRef.current.signal);
+                const newData = await fetcher(
+                    abortControllerRef.current.signal
+                );
 
                 if (currentRequestId !== lastRequestIdRef.current) return;
 
@@ -116,7 +115,6 @@ export default function useQuery<T = unknown>(
             if (abortControllerRef.current) abortControllerRef.current.abort();
             hasFetchedOnce.current = 0;
         };
-
     }, [memoizeKeys(key), fetcher]);
 
     const refetch = useCallback(async () => {
@@ -124,5 +122,10 @@ export default function useQuery<T = unknown>(
         return fetchData();
     }, [key, fetcher]);
 
-    return { data: state.data, error: state.error, status: state.status, refetch };
+    return {
+        data: state.data,
+        error: state.error,
+        status: state.status,
+        refetch,
+    };
 }
