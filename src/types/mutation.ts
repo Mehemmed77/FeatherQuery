@@ -31,7 +31,7 @@ export type Config<TResponse, TVariables> =
           mutateFn?: never;
           url: string;
           method: MethodTypes;
-          headers: HeadersInit;
+          headers?: HeadersInit;
       };
 
 export type Options<TResponse, TError extends Error, TVariables> = {

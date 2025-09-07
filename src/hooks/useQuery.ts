@@ -3,7 +3,6 @@ import usePolling from '../utils/query/usePolling';
 import { isDataStale, updateCache } from '../utils/cache/cacheUtils';
 import useRequestIdTracker from '../utils/query/useLastRequestId';
 import memoizeKeys from '../utils/query/memoizeKeys';
-import { CacheMode } from '../types/cache';
 import { queryReducer } from '../core/QueryReducer';
 import useQueryClient from '../utils/query/useQueryClient';
 import { fetchFresh } from '../utils/query/fetchFresh';

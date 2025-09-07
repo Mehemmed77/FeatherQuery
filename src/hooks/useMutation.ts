@@ -5,9 +5,9 @@ import { queryReducer } from '../core/QueryReducer';
 import useQueryClient from '../utils/query/useQueryClient';
 
 export default function useMutation<
-    TResponse,
-    TError extends Error,
-    TVariables
+    TResponse = unknown,
+    TError extends Error = Error,
+    TVariables = unknown
 >(
     config: Config<TResponse, TVariables>,
     options?: Options<TResponse, TError, TVariables>

@@ -1,46 +1,42 @@
 import { CacheEntry } from '../types/cache';
-import {
-    areArraysEqualEvery,
-    hashKey,
-    isPrefix,
-} from '../utils/general/arrays';
+import { ICache } from './ICache';
 
-export class StorageCache {
+export class StorageCache extends ICache {
     storage: Storage;
 
-    private storageMap: Map<string, CacheEntry<unknown>> = new Map();
+    cache: Map<string, CacheEntry<unknown>>;
+    storageKey = 'featherQuery'
+
+    hydrateCache() {
+        const raw = this.storage.getItem(this.storageKey);
+
+        if(!raw) {
+            this.cache = new Map();
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as [string, CacheEntry<unknown>][];
+            this.cache = new Map(parsed);
+        } catch {
+            this.cache = new Map();
+        }
+
+    }
 
     constructor(storage: Storage) {
+        super();
         this.storage = storage;
+        this.hydrateCache();
     }
 
-    get<T>(key: unknown): CacheEntry<T> | undefined {
-        return JSON.parse(this.storage.getItem(hashKey(key))) as
-            | CacheEntry<T>
-            | undefined;
-    }
-
-    getAll<T>(): [string, CacheEntry<T>][] {
-        return Array.from(this.storage.entries()) as [string, CacheEntry<T>][];
+    writeToStorage() {
+        const entries = Array.from(this.cache.entries());
+        this.storage.setItem(this.storageKey, JSON.stringify(entries))
     }
 
     set<T>(key: unknown, entry: CacheEntry<T>): void {
-        this.storage.setItem(hashKey(key), JSON.stringify(entry));
-    }
-
-    delete(prefix: unknown[], exact = false) {
-        for (const key of this.storage.keys()) {
-            const full = JSON.parse(key) as unknown[];
-            if (exact && areArraysEqualEvery(prefix, full)) {
-                this.storage.delete(key);
-                break;
-            }
-
-            if (!exact && isPrefix(prefix, full)) this.storage.delete(key);
-        }
-    }
-
-    deleteAll() {
-        this.storage.clear();
+        super.set(key, entry);
+        this.writeToStorage();
     }
 }

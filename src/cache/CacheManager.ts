@@ -2,7 +2,7 @@ import { VolatileCache } from './VolatileCache';
 import { StorageCache } from './StorageCache';
 
 export class CacheManager {
-    volatileCache = new VolatileCache();
-    sessionCache = new StorageCache(sessionStorage);
-    permanentCache = new StorageCache(localStorage);
+    static volatileCache = new VolatileCache();
+    static sessionCache = new StorageCache(sessionStorage);
+    static permanentCache = new StorageCache(localStorage);
 }

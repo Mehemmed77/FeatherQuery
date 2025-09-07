@@ -15,14 +15,16 @@ const QueryProvider = ({
 }: PropsWithChildren<QueryProviderProps>) => {
     const intervalId = useRef<number | NodeJS.Timeout | null>(null);
 
-    const volatileCache = new CacheManager().volatileCache;
-    const sessionCache = new CacheManager().sessionCache;
-    const permanentCache = new CacheManager().permanentCache;
+    const volatileCache = CacheManager.volatileCache;
+    const sessionCache = CacheManager.sessionCache;
+    const permanentCache = CacheManager.permanentCache;
 
     useEffect(() => {
         intervalId.current = volatileCache.startCacheGC(interval, defaultCacheTime);
 
         return () => {
+            sessionCache.writeToStorage();
+            permanentCache.writeToStorage();
             if (intervalId.current) clearInterval(intervalId.current);
             intervalId.current = null;
         };
