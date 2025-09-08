@@ -14,7 +14,6 @@ export class StorageCache extends ICache {
             this.cache = new Map();
             return;
         }
-        
 
         try {
             const parsed = JSON.parse(raw) as [string, CacheEntry<unknown>][];

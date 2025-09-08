@@ -68,7 +68,6 @@ export default function useQuery<T = unknown>(
                         fetcher,
                         abortControllerRef.current,
                         key,
-                        staleTime,
                         currentRequestId,
                         lastRequestIdRef.current,
                         cache,
@@ -88,7 +87,7 @@ export default function useQuery<T = unknown>(
                 dispatch({ type: 'SUCCESS', data: newData });
                 onSuccess?.(newData);
 
-                updateCache(key, newData, staleTime, cache);
+                updateCache(key, newData, cache);
             }
 
             hasFetchedOnce.current = 1;

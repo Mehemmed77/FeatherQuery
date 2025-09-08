@@ -5,11 +5,15 @@ export class ICache {
     cache: Map<string, CacheEntry<unknown>> = new Map();
 
     get<T>(key: unknown): CacheEntry<T> | undefined {
+        const entry = this.cache.get(hashKey(key));
+        entry.updatedAt = Date.now();
         return this.cache.get(hashKey(key)) as CacheEntry<T> | undefined;
     }
 
     getAll<T>(): [string, CacheEntry<T>][] {
-        return Array.from(this.cache.entries()) as [string, CacheEntry<T>][];
+        const entries = Array.from(this.cache.entries()) as [string, CacheEntry<T>][];
+        entries.forEach(([_, entry]) => entry.lastAccessed = Date.now());
+        return entries;
     }
 
     set<T>(key: unknown, entry: CacheEntry<T>): void {

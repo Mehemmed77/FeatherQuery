@@ -7,7 +7,6 @@ export async function fetchFresh<T>(
     fetcher: (signal: AbortSignal) => Promise<T>,
     abortController: AbortController,
     key: any[],
-    staleTime: number,
     currentRequestId: number,
     lastRequestId: number,
     cache: VolatileCache | StorageCache,
@@ -17,7 +16,7 @@ export async function fetchFresh<T>(
     const newData = await fetcher(abortController.signal);
     if (currentRequestId !== lastRequestId) return;
 
-    updateCache(key, newData, staleTime, cache);
+    updateCache(key, newData, cache);
     dispatch({ type: 'SUCCESS', data: newData });
     onSuccess?.(newData);
 }

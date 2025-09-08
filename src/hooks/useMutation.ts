@@ -88,6 +88,7 @@ export default function useMutation<
 
                 return response;
             } catch (e: unknown) {
+                console.log("SALAAAAm");
                 if (e instanceof Error && e.name !== 'AbortError') {
                     tempError = e as TError;
 

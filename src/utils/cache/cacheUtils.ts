@@ -5,13 +5,13 @@ import { CacheEntry } from '../../types/cache';
 export function updateCache<T>(
     key: string[],
     data: T,
-    staleTime: number,
     cache: VolatileCache | StorageCache
 ) {
     const now = Date.now();
     cache.set<T>(key, {
         data,
         updatedAt: now,
+        lastAccessed: now
     });
 }
 

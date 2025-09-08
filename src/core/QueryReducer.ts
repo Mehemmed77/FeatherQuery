@@ -37,7 +37,7 @@ export function queryReducer<T, E extends Error = Error>(
 
         case 'SUCCESS_RESPONSE': {
             const response = action.response;
-            return { ...state, response: response };
+            return { ...state, response: response, status: "SUCCESS" };
         }
 
         case 'REFETCH_START': {
