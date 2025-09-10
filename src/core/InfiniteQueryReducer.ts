@@ -9,8 +9,8 @@ interface QueryState<T, TPageParam> {
 }
 
 export type QueryAction<T, TPageParam> =
-    | { type: 'FETCH_NEXT_SUCCESS'; entity: PagedDataEntry<T, TPageParam> }
-    | { type: 'FETCH_PREV_SUCCESS'; entity: PagedDataEntry<T, TPageParam> }
+    | { type: 'REFETCH_START'; staleEntity: PagedDataEntry<T, TPageParam> }
+    | { type: 'FETCH_PREV'; entity: PagedDataEntry<T, TPageParam> }
     | { type: 'LOADING' }
     | { type: 'SUCCESS'; entity: PagedDataEntry<T, TPageParam> }
     | { type: 'ERROR'; error: Error }
@@ -21,29 +21,32 @@ export default function InfiniteQueryReducer<T, TPageParam>(
     action: QueryAction<T, TPageParam>
 ): QueryState<T, TPageParam> {
     switch (action.type) {
-        case "FETCH_NEXT_SUCCESS": {
+        case 'REFETCH_START': {
+            const newData = {
+                pages: [...state.data.pages, action.staleEntity.page],
+                pageParams: [
+                    ...state.data.pageParams,
+                    action.staleEntity.pageParam,
+                ],
+            };
+
+            return {
+                data: newData,
+                pageParam: action.staleEntity.pageParam,
+                status: 'FETCHING',
+                error: null,
+            };
+        }
+
+        case 'SUCCESS': {
             const newData = {
                 pages: [...state.data.pages, action.entity.page],
                 pageParams: [...state.data.pageParams, action.entity.pageParam],
             };
 
             return {
-                ...state,
                 data: newData,
-                status: "SUCCESS",
-                error: null,
-            }
-        }
-
-        case 'SUCCESS': {
-            const initialData = {
-                pages: [action.entity.page],
-                pageParams: [action.entity.pageParam]
-            }
-
-            return {
-                ...state,
-                data: initialData,
+                pageParam: action.entity.pageParam,
                 status: 'SUCCESS',
                 error: null,
             };
@@ -59,7 +62,7 @@ export default function InfiniteQueryReducer<T, TPageParam>(
 
         case 'RESET': {
             return {
-                ...state,
+                pageParam: null,
                 data: null,
                 error: null,
                 status: 'IDLE',

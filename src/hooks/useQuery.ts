@@ -72,6 +72,7 @@ export default function useQuery<T = unknown>(
                         lastRequestIdRef.current,
                         cache,
                         dispatch,
+                        "query",
                         onSuccess
                     );
                 } else {
