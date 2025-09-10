@@ -6,8 +6,8 @@ export class ICache {
 
     get<T>(key: unknown): CacheEntry<T> | undefined {
         const entry = this.cache.get(hashKey(key));
-        entry.updatedAt = Date.now();
-        return this.cache.get(hashKey(key)) as CacheEntry<T> | undefined;
+        if (entry) entry.lastAccessed = Date.now();
+        return entry as CacheEntry<T> | undefined;
     }
 
     getAll<T>(): [string, CacheEntry<T>][] {

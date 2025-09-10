@@ -2,11 +2,11 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import usePolling from '../utils/query/usePolling';
 import { isDataStale, updateCache } from '../utils/cache/cacheUtils';
 import useRequestIdTracker from '../utils/query/useLastRequestId';
-import memoizeKeys from '../utils/query/memoizeKeys';
 import { queryReducer } from '../core/QueryReducer';
 import useQueryClient from '../utils/query/useQueryClient';
 import { fetchFresh } from '../utils/query/fetchFresh';
 import { QueryOptions } from '../types/query';
+import useMemoizedKeys from '../utils/query/memoizeKeys';
 
 export default function useQuery<T = unknown>(
     key: any[],
@@ -113,7 +113,7 @@ export default function useQuery<T = unknown>(
             if (abortControllerRef.current) abortControllerRef.current.abort();
             hasFetchedOnce.current = 0;
         };
-    }, [memoizeKeys(key), fetcher]);
+    }, [useMemoizedKeys(key), fetcher]);
 
     const refetch = useCallback(async () => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
