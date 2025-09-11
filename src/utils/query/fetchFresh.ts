@@ -11,21 +11,12 @@ export async function fetchFresh<T>(
     lastRequestId: number,
     cache: VolatileCache | StorageCache,
     dispatch: React.Dispatch<QueryAction<T>>,
-    requestIsComingFrom: string,
     onSuccess?: (data: any) => any
 ) {
     const newData = await fetcher(abortController.signal);
     if (currentRequestId !== lastRequestId) return;
 
     updateCache(key, newData, cache);
-
-    if (requestIsComingFrom === "query") {
-        dispatch({ type: 'SUCCESS', data: newData });
-        onSuccess?.(newData);
-    }
-
-    else {
-        const entity = {}
-    }
-
+    dispatch({ type: 'SUCCESS', data: newData });
+    onSuccess?.(newData);
 }

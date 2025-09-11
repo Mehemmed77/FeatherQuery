@@ -1,5 +1,5 @@
 export type CacheEntry<T> = {
-    data: T;
+    data: T | T[];
     updatedAt: number;
     lastAccessed: number;
 };

@@ -1,15 +1,15 @@
 import { PagedDataEntries, PagedDataEntry } from '../types/infiniteQuery';
 import { STATUS } from '../types/status';
 
-interface QueryState<T, TPageParam> {
+export interface QueryState<T, TPageParam> {
     data: PagedDataEntries<T, TPageParam> | null;
-    pageParam: TPageParam;
     status: STATUS;
     error: Error | null;
 }
 
 export type QueryAction<T, TPageParam> =
     | { type: 'REFETCH_START'; staleEntity: PagedDataEntry<T, TPageParam> }
+    | { type: 'REFETCH_END'; entity: PagedDataEntry<T, TPageParam> }
     | { type: 'FETCH_PREV'; entity: PagedDataEntry<T, TPageParam> }
     | { type: 'LOADING' }
     | { type: 'SUCCESS'; entity: PagedDataEntry<T, TPageParam> }
@@ -32,8 +32,25 @@ export default function InfiniteQueryReducer<T, TPageParam>(
 
             return {
                 data: newData,
-                pageParam: action.staleEntity.pageParam,
                 status: 'FETCHING',
+                error: null,
+            };
+        }
+
+        case 'REFETCH_END': {
+            const entity = action.entity;
+
+            const prevData = state.data.pages;
+
+            return {
+                data: {
+                    pages: [
+                        ...prevData.slice(prevData.length - 1),
+                        entity.page,
+                    ],
+                    pageParams: state.data.pageParams,
+                },
+                status: 'SUCCESS',
                 error: null,
             };
         }
@@ -46,7 +63,6 @@ export default function InfiniteQueryReducer<T, TPageParam>(
 
             return {
                 data: newData,
-                pageParam: action.entity.pageParam,
                 status: 'SUCCESS',
                 error: null,
             };
@@ -62,7 +78,6 @@ export default function InfiniteQueryReducer<T, TPageParam>(
 
         case 'RESET': {
             return {
-                pageParam: null,
                 data: null,
                 error: null,
                 status: 'IDLE',

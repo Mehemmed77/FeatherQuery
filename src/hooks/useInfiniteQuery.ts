@@ -1,16 +1,17 @@
 import { useEffect, useReducer, useRef } from 'react';
-import { InfiniteQueryOptions, PagedDataEntry } from '../types/infiniteQuery';
+import { InfiniteQueryOptions, PagedDataEntries, PagedDataEntry } from '../types/infiniteQuery';
 import useMemoizedKeys from '../utils/query/memoizeKeys';
 import useQueryClient from '../utils/query/useQueryClient';
 import InfiniteQueryReducer from '../core/InfiniteQueryReducer';
 import { isDataStale } from '../utils/cache/cacheUtils';
 import { fetchFresh } from '../utils/query/fetchFresh';
 import useRequestIdTracker from '../utils/query/useLastRequestId';
+import addEntity from '../utils/query/addEntity';
 
 export default function useInfiniteQuery<T = unknown, TPageParam = unknown>(
     key: TPageParam,
     fetcher: (pageParam: TPageParam, signal: AbortSignal) => Promise<T[]>,
-    getNextPageParam: (lastPage: any, allPages: any) => any,
+    getNextPageParam: (lastPage: TPageParam, allPages: PagedDataEntries<T, TPageParam>) => any,
     options?: InfiniteQueryOptions<T, TPageParam>
 ) {
     const {
@@ -26,9 +27,8 @@ export default function useInfiniteQuery<T = unknown, TPageParam = unknown>(
 
     // States
     const [state, dispatch] = useReducer(InfiniteQueryReducer<T, TPageParam>, {
-        data: null,
+        data: { pages: [], pageParams: [] },
         error: null,
-        pageParam: key,
         status: 'IDLE',
     });
 
@@ -37,7 +37,7 @@ export default function useInfiniteQuery<T = unknown, TPageParam = unknown>(
     const hasFetchedOnce = useRef<boolean>(false);
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
 
-    const fetchPage = async (key: TPageParam, fresh: boolean) => {
+    const fetchPage = async (key: TPageParam) => {
         let tempData: PagedDataEntry<T, TPageParam> | null,
             tempError: Error | null;
 
@@ -45,45 +45,46 @@ export default function useInfiniteQuery<T = unknown, TPageParam = unknown>(
 
         try {
             if (abortControllerRef.current) abortControllerRef.current.abort();
+            abortControllerRef.current = new AbortController();
+
             dispatch({ type: 'LOADING' });
 
             const currentRequestId = incrementAndGet();
 
             const cached = cache.get(key);
+            let entity: PagedDataEntry<T, TPageParam>;
+
             if (cached) {
-                const entity = { page: cached.data as T[], pageParam: key };
+                entity = { page: cached.data as T[], pageParam: key }
                 if(isDataStale(cached, staleTime)) {
                     dispatch({ type: "REFETCH_START", staleEntity: entity });
-                    await fetchFresh(
-                        fetcher,
-                        abortControllerRef,
+                    entity = await addEntity(
                         key,
+                        fetcher,
+                        abortControllerRef.current.signal,
                         currentRequestId,
                         lastRequestIdRef.current,
                         cache,
-                        dispatch,
-                        "infiniteQuery",
-                        onSuccess
-                    );
+                    )
+
+                    dispatch({ type: "REFETCH_END", entity: entity });
                 }
             }
 
-            const pagedData = await fetcher(
-                key,
-                abortControllerRef.current.signal
-            );
-            const entity = { page: pagedData, pageParam: key };
-
-            if (currentRequestId !== lastRequestIdRef.current) return;
-
-            dispatch({
-                type: 'SUCCESS',
-                entity: entity,
-            });
-
+            else {
+                entity = await addEntity(
+                    key,
+                    fetcher,
+                    abortControllerRef.current.signal,
+                    currentRequestId,
+                    lastRequestIdRef.current,
+                    cache,
+                )
+                dispatch({ type: "SUCCESS", entity: entity });
+            }
             tempData = entity;
 
-            onSuccess?.({ page: pagedData, pageParam: key });
+            onSuccess?.(tempData);
 
         } catch (e: any) {
             if (e instanceof Error && e.name !== 'AbortError') {
@@ -96,12 +97,26 @@ export default function useInfiniteQuery<T = unknown, TPageParam = unknown>(
         }
     };
 
+    const fetchNextPage = () => {
+        const newKey = getNextPageParam(key, data);
+        fetchPage(newKey);
+    }
+
+    const fetchPreviousPage = () => {
+
+    }
+
     useEffect(() => {
         if (hasFetchedOnce.current) dispatch({ type: "RESET" });
-        fetchPage(key, true);
+        fetchPage(key);
 
         return () => {
             if (abortControllerRef.current) abortControllerRef.current.abort();
         };
     }, [useMemoizedKeys(key)]);
+
+
+    const { data, error, status } = state;
+
+    return {data, error, status, fetchNextPage};
 }

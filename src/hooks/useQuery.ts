@@ -61,7 +61,7 @@ export default function useQuery<T = unknown>(
                 if (isPolling || isDataStale(cachedData, staleTime)) {
                     dispatch({
                         type: 'REFETCH_START',
-                        cachedData: cachedData.data,
+                        cachedData: cachedData.data as T,
                     });
 
                     await fetchFresh(
@@ -72,11 +72,10 @@ export default function useQuery<T = unknown>(
                         lastRequestIdRef.current,
                         cache,
                         dispatch,
-                        "query",
                         onSuccess
                     );
                 } else {
-                    dispatch({ type: 'SUCCESS', data: cachedData.data });
+                    dispatch({ type: 'SUCCESS', data: cachedData.data as T });
                 }
             } else {
                 const newData = await fetcher(
@@ -101,7 +100,7 @@ export default function useQuery<T = unknown>(
                 requestInFlight.current = false;
             }
         } finally {
-            onSettled?.(cache.get<T>(key)?.data ?? null, tempError ?? null);
+            onSettled?.(cache.get<T>(key)?.data as T ?? null, tempError ?? null);
         }
     };
 
