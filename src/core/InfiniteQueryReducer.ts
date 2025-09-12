@@ -1,37 +1,29 @@
 import { PagedDataEntries, PagedDataEntry } from '../types/infiniteQuery';
 import { STATUS } from '../types/status';
 
-export interface QueryState<T, TPageParam> {
-    data: PagedDataEntries<T, TPageParam> | null;
+export interface QueryState<T> {
+    data: PagedDataEntries<T> | null;
     status: STATUS;
     error: Error | null;
 }
 
-export type QueryAction<T, TPageParam> =
-    | { type: 'REFETCH_START'; staleEntity: PagedDataEntry<T, TPageParam> }
-    | { type: 'REFETCH_END'; entity: PagedDataEntry<T, TPageParam> }
-    | { type: 'FETCH_PREV'; entity: PagedDataEntry<T, TPageParam> }
+export type QueryAction<T> =
+    | { type: 'REFETCH_START'; staleEntity: PagedDataEntry<T> }
+    | { type: 'REFETCH_END'; entity: PagedDataEntry<T> }
+    | { type: 'FETCH_PREV'; entity: PagedDataEntry<T> }
     | { type: 'LOADING' }
-    | { type: 'SUCCESS'; entity: PagedDataEntry<T, TPageParam> }
+    | { type: 'SUCCESS'; entity: PagedDataEntry<T> }
     | { type: 'ERROR'; error: Error }
     | { type: 'RESET' };
 
-export default function InfiniteQueryReducer<T, TPageParam>(
-    state: QueryState<T, TPageParam>,
-    action: QueryAction<T, TPageParam>
-): QueryState<T, TPageParam> {
+export default function InfiniteQueryReducer<T>(
+    state: QueryState<T>,
+    action: QueryAction<T>
+): QueryState<T> {
     switch (action.type) {
         case 'REFETCH_START': {
-            const newData = {
-                pages: [...state.data.pages, action.staleEntity.page],
-                pageParams: [
-                    ...state.data.pageParams,
-                    action.staleEntity.pageParam,
-                ],
-            };
-
             return {
-                data: newData,
+                ...state,
                 status: 'FETCHING',
                 error: null,
             };
@@ -40,14 +32,11 @@ export default function InfiniteQueryReducer<T, TPageParam>(
         case 'REFETCH_END': {
             const entity = action.entity;
 
-            const prevData = state.data.pages;
-
             return {
                 data: {
-                    pages: [
-                        ...prevData.slice(prevData.length - 1),
-                        entity.page,
-                    ],
+                    pages: state.data.pages.map((p, idx) =>
+                        state.data.pageParams[idx] === entity.pageParam ? entity.page : p
+                    ),
                     pageParams: state.data.pageParams,
                 },
                 status: 'SUCCESS',
@@ -78,7 +67,7 @@ export default function InfiniteQueryReducer<T, TPageParam>(
 
         case 'RESET': {
             return {
-                data: null,
+                data: { pages: [], pageParams: [] },
                 error: null,
                 status: 'IDLE',
             };
