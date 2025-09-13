@@ -4,7 +4,6 @@ import { ICache } from './ICache';
 export class StorageCache extends ICache {
     storage: Storage;
 
-    cache: Map<string, CacheEntry<unknown>>;
     storageKey = 'featherQuery'
 
     hydrateCache() {

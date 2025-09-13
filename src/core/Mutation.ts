@@ -4,7 +4,7 @@ import useMutation from '../hooks/useMutation';
 import { CacheMode } from '../types/cache';
 import { Config, Options } from '../types/mutation';
 
-export class Mutation<TResponse = unknown, TError extends Error = Error, TVariables = unknown> {
+export default class Mutation<TResponse = unknown, TError extends Error = Error, TVariables = unknown> {
     private config: Config<TResponse, TVariables>;
     private options: Options<TResponse, TError, TVariables>;
 

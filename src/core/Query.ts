@@ -2,7 +2,7 @@ import useQuery from "../hooks/useQuery";
 import { CacheMode } from "../types/cache";
 import { QueryOptions } from "../types/query";
 
-export class Query<T = unknown> {
+export default class Query<T = unknown> {
     private key: any[];
     private fetcher: (signal: AbortSignal) => Promise<T>;
     private options: QueryOptions<T>;

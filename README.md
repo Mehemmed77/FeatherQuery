@@ -2,6 +2,8 @@
 
 ![logo](assets/mainLogoWithBgTr.png)
 
+# NOTE: This version is not stable. This is still demo, Caching system is incomplete and hooks are not tested to their fullest.
+
 Data fetching, light as a **feather**.
 A lightweight React library for fetching, caching, and mutating API data with minimal boilerplate.
 
@@ -18,6 +20,43 @@ Modern data-fetching libraries like TanStack Query or RTK Query are powerful, bu
 -   🔧 Extensible – start simple, scale when needed
 
 ## 🚀 Features (Hooks)
+
+## useQueryClient
+
+### Overview
+
+A React hook that provides access to the appropriate cache instance based on the specified cache mode. Must be used within a QueryProvider context.
+
+### Usage
+
+```typescript
+
+import useQueryClient from './useQueryClient';
+
+function MyComponent() {
+    const { cache } = useQueryClient('session'); // or 'volatile', 'permanent'
+    
+    // Use cache methods
+    const data = cache.get(['my-data']);
+    cache.set(['my-data'], { value: 'test' });
+}
+```
+
+### Cache Modes
+
+`volatile (default)` - In-memory cache, clears on page refresh
+
+`session` - Persists for the browser session only
+
+`permanent` - Persists until manually cleared
+
+### Returns
+
+`cache: Cache` - The cache instance for the specified mode
+
+Context Requirement
+
+## **All the hooks must be used within a QueryProvider component, otherwise throws an error.**
 
 ### `useFetch` 
 

@@ -1,7 +1,7 @@
 import useFetch from "../hooks/useFetch";
 import { FetchOptions } from "../types/fetch";
 
-export class Fetch<T = unknown> {
+export default class Fetch<T = unknown> {
     private url: string;
     private options: FetchOptions;
 

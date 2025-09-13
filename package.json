@@ -1,7 +1,7 @@
 {
   "name": "featherquery",
-  "version": "1.0.0",
-  "description": "Data fetching, light as a **feather**.\r A lightweight React library for fetching, caching, and mutating API data with minimal boilerplate.",
+  "version": "0.1.0",
+  "description": "Data fetching, light as a feather. A lightweight React library for fetching, caching, and mutating API data with minimal boilerplate.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -13,22 +13,33 @@
     "type": "git",
     "url": "git+https://github.com/Mehemmed-Kazimzade/FeatherQuery.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "react",
+    "data-fetching",
+    "react-query",
+    "hooks",
+    "useFetch",
+    "useQuery",
+    "useMutation",
+    "useInfiniteQuery",
+    "featherquery"
+  ],
+  "author": "Mehemmed Kazimzade",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Mehemmed-Kazimzade/FeatherQuery/issues"
   },
   "homepage": "https://github.com/Mehemmed-Kazimzade/FeatherQuery#readme",
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@typescript-eslint/eslint-plugin": "^8.40.0",
     "@typescript-eslint/parser": "^8.40.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   }
