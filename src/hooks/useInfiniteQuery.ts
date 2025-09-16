@@ -10,6 +10,7 @@ import InfiniteQueryReducer from '../core/InfiniteQueryReducer';
 import { isDataStale } from '../utils/cache/cacheUtils';
 import useRequestIdTracker from '../utils/query/useLastRequestId';
 import addEntity from '../utils/query/addEntity';
+import { DEFAULT_QUERY_STALE_TIME } from '../constants/constant';
 
 export default function useInfiniteQuery<T = unknown>(
     key: string | number,
@@ -20,7 +21,7 @@ export default function useInfiniteQuery<T = unknown>(
     const {
         getPreviousPageParam,
         initialFetch = false,
-        staleTime = 30_000,
+        staleTime = DEFAULT_QUERY_STALE_TIME,
         onSuccess,
         onError,
         onSettled,

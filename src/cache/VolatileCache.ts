@@ -1,12 +1,13 @@
+import { MAX_CACHE_SIZE } from '../constants/constant';
 import { LRUNode } from '../types/cache';
 import { ICache } from './ICache';
 
 export class VolatileCache extends ICache {
     startCacheGC(interval: number, defaultCacheTime: number) {
         return setInterval(() => {
-            if (this.cache.size <= 100) return;
+            if (this.cache.size <= MAX_CACHE_SIZE) return;
             let count = 0,
-                k = this.cache.size - 100;
+                k = this.cache.size - MAX_CACHE_SIZE;
 
             let tail: LRUNode = this.tail;
             while (count < k) {

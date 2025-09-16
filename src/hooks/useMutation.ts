@@ -3,6 +3,7 @@ import { Config, MutateFn, Options } from '../types/mutation';
 import useRequestIdTracker from '../utils/query/useLastRequestId';
 import { queryReducer } from '../core/QueryReducer';
 import useQueryClient from '../utils/query/useQueryClient';
+import { defaultRetryDelayFunction } from '../constants/constant';
 
 export default function useMutation<
     TResponse = unknown,
@@ -21,7 +22,7 @@ export default function useMutation<
         optimisticUpdate,
         rollback,
         retries = 0,
-        retryDelay = (attempt: number) => 1000 * 2 ** (attempt - 1),
+        retryDelay = defaultRetryDelayFunction,
         cacheMode,
     } = options;
     const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
@@ -88,7 +89,6 @@ export default function useMutation<
 
                 return response;
             } catch (e: unknown) {
-                console.log("SALAAAAm");
                 if (e instanceof Error && e.name !== 'AbortError') {
                     tempError = e as TError;
 

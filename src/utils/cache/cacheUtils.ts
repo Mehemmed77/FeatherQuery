@@ -11,7 +11,8 @@ export function updateCache<T>(
     cache.set<T>(key, {
         data,
         updatedAt: now,
-        lastAccessed: now
+        lastAccessed: now,
+        node: null,
     });
 }
 

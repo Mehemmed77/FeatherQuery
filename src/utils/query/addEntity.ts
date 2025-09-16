@@ -16,7 +16,7 @@ export default async function addEntity<T, TPageParam>(
 
     if (currentRequestId !== lastRequestId) return;
 
-    const cacheEntity: CacheEntry<T> = { data: pagedData as T[], updatedAt: Date.now(), lastAccessed: Date.now()};
+    const cacheEntity: CacheEntry<T> = { data: pagedData as T[], updatedAt: Date.now(), lastAccessed: Date.now(), node: null};
     cache.set<T>(key, cacheEntity);
 
     return entity;

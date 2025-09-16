@@ -7,6 +7,7 @@ import useQueryClient from '../utils/query/useQueryClient';
 import { fetchFresh } from '../utils/query/fetchFresh';
 import { QueryOptions } from '../types/query';
 import useMemoizedKeys from '../utils/query/memoizeKeys';
+import { DEFAULT_QUERY_STALE_TIME } from '../constants/constant';
 
 export default function useQuery<T = unknown>(
     key: any[],
@@ -30,7 +31,7 @@ export default function useQuery<T = unknown>(
 
     const {
         pollInterval,
-        staleTime = 30_000,
+        staleTime = DEFAULT_QUERY_STALE_TIME,
         onSuccess,
         onError,
         onSettled,

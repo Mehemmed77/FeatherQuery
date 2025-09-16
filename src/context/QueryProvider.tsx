@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { PropsWithChildren } from 'react';
 import QueryContext from './QueryContext';
 import { CacheManager } from '../cache/CacheManager';
+import { DEFAULT_GC_CACHE_TIME, DEFAULT_GC_INTERVAL } from '../constants/constant';
 
 interface QueryProviderProps {
     interval?: number;
@@ -9,8 +10,8 @@ interface QueryProviderProps {
 }
 
 const QueryProvider = ({
-    interval = 60_000,
-    defaultCacheTime = 300_000,
+    interval = DEFAULT_GC_INTERVAL,
+    defaultCacheTime = DEFAULT_GC_CACHE_TIME,
     children,
 }: PropsWithChildren<QueryProviderProps>) => {
     const intervalId = useRef<number | NodeJS.Timeout | null>(null);
