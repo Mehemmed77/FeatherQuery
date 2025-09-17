@@ -3,7 +3,7 @@ import { FetchOptions } from "../types/fetch";
 
 export default class Fetch<T = unknown> {
     private url: string;
-    private options: FetchOptions;
+    private options: FetchOptions = {};
 
     constructor(url: string) {
         this.url = url;
