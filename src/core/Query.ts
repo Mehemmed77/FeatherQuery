@@ -5,7 +5,7 @@ import { QueryOptions } from "../types/query";
 export default class Query<T = unknown> {
     private key: any[];
     private fetcher: (signal: AbortSignal) => Promise<T>;
-    private options: QueryOptions<T>;
+    private options: QueryOptions<T> = {};
 
     constructor(key: any[], fetcher: (signal: AbortSignal) => Promise<T>) {
         this.key = key;

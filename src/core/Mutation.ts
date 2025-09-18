@@ -6,7 +6,7 @@ import { Config, Options } from '../types/mutation';
 
 export default class Mutation<TResponse = unknown, TError extends Error = Error, TVariables = unknown> {
     private config: Config<TResponse, TVariables>;
-    private options: Options<TResponse, TError, TVariables>;
+    private options: Options<TResponse, TError, TVariables> = {};
 
     constructor(config: Config<TResponse, TVariables>) {
         this.config = config;
