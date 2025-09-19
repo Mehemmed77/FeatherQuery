@@ -22,20 +22,18 @@ export default function useQuery<T = unknown>(
         status: 'STATIC',
     });
 
-    const { lastRequestIdRef, incrementAndGet } = useRequestIdTracker();
-
     // Refs
     const hasFetchedOnce = useRef<number>(0);
     const abortControllerRef = useRef<AbortController | null>(null);
     const requestInFlight = useRef<boolean>(false);
 
     const {
-        pollInterval,
+        pollInterval = 0,
         staleTime = DEFAULT_QUERY_STALE_TIME,
         onSuccess,
         onError,
         onSettled,
-        cacheMode,
+        cacheMode = "volatile",
     } = options ?? {};
 
     const { cache } = useQueryClient(cacheMode);
@@ -50,8 +48,6 @@ export default function useQuery<T = unknown>(
             if (abortControllerRef.current) abortControllerRef.current.abort();
             abortControllerRef.current = new AbortController();
 
-            const currentRequestId = incrementAndGet();
-
             if (hasFetchedOnce.current !== 0) dispatch({ type: 'FETCHING' });
 
             requestInFlight.current = true;
@@ -65,12 +61,12 @@ export default function useQuery<T = unknown>(
                         cachedData: cachedData.data as T,
                     });
 
+                    console.log("SALAM");
+
                     await fetchFresh(
                         fetcher,
                         abortControllerRef.current,
                         key,
-                        currentRequestId,
-                        lastRequestIdRef.current,
                         cache,
                         dispatch,
                         onSuccess
@@ -82,9 +78,7 @@ export default function useQuery<T = unknown>(
                 const newData = await fetcher(
                     abortControllerRef.current.signal
                 );
-
-                if (currentRequestId !== lastRequestIdRef.current) return;
-
+                
                 dispatch({ type: 'SUCCESS', data: newData });
                 onSuccess?.(newData);
 
@@ -94,12 +88,18 @@ export default function useQuery<T = unknown>(
             hasFetchedOnce.current = 1;
             requestInFlight.current = false;
         } catch (err) {
-            if (err instanceof Error && err.name !== 'AbortError') {
-                dispatch({ type: 'ERROR', error: err });
-                onError?.(err);
-                tempError = err;
-                requestInFlight.current = false;
-            }
+            let normalizedError: Error;
+
+            if (err instanceof Error) normalizedError = err;
+            else normalizedError = new Error(String(err));
+
+            if (normalizedError.name === "AbortError") return;
+
+            dispatch({ type: 'ERROR', error: err });
+            onError?.(err);
+            tempError = err;
+            requestInFlight.current = false;
+
         } finally {
             onSettled?.(cache.get<T>(key)?.data as T ?? null, tempError ?? null);
         }

@@ -1,7 +1,7 @@
 export type CacheEntry<T> = {
     data: T | T[];
     updatedAt: number;
-    node: LRUNode;
+    node: LRUNode | null;
     lastAccessed: number;
 };
 
