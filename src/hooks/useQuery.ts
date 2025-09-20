@@ -38,14 +38,17 @@ export default function useQuery<T = unknown>(
 
     const { cache } = useQueryClient(cacheMode);
 
-    const fetchData = async (isPolling?: boolean) => {
+    const fetchData = async (force?: boolean) => {
         if (hasFetchedOnce.current === 0 && !cache.get<T>(key))
             dispatch({ type: 'LOADING' });
 
         let tempError: Error | null;
 
         try {
-            if (abortControllerRef.current) abortControllerRef.current.abort();
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+                console.log("Aborted");
+            };
             abortControllerRef.current = new AbortController();
 
             if (hasFetchedOnce.current !== 0) dispatch({ type: 'FETCHING' });
@@ -55,13 +58,11 @@ export default function useQuery<T = unknown>(
             const cachedData = cache.get<T>(key);
 
             if (cachedData) {
-                if (isPolling || isDataStale(cachedData, staleTime)) {
+                if (force || isDataStale(cachedData, staleTime)) {
                     dispatch({
                         type: 'REFETCH_START',
                         cachedData: cachedData.data as T,
                     });
-
-                    console.log("SALAM");
 
                     await fetchFresh(
                         fetcher,
@@ -118,7 +119,7 @@ export default function useQuery<T = unknown>(
 
     const refetch = useCallback(async () => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
-        return fetchData();
+        return fetchData(true);
     }, [key, fetcher]);
 
     return {
