@@ -33,77 +33,91 @@ export default function useQuery<T = unknown>(
         onSuccess,
         onError,
         onSettled,
-        cacheMode = "volatile",
+        cacheMode = 'volatile',
     } = options ?? {};
 
     const { cache } = useQueryClient(cacheMode);
 
-    const fetchData = async (force?: boolean) => {
-        if (hasFetchedOnce.current === 0 && !cache.get<T>(key))
-            dispatch({ type: 'LOADING' });
+    const onSuccessRef = useRef(onSuccess);
+    const onErrorRef = useRef(onError);
+    const onSettledRef = useRef(onSettled);
+    const fetcherRef = useRef(fetcher);
 
-        let tempError: Error | null;
+    const fetchData = useCallback(
+        async (force?: boolean) => {
+            if (hasFetchedOnce.current === 0 && !cache.get<T>(key))
+                dispatch({ type: 'LOADING' });
 
-        try {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            };
-            abortControllerRef.current = new AbortController();
+            let tempError: Error | null;
 
-            if (hasFetchedOnce.current !== 0) dispatch({ type: 'FETCHING' });
-
-            requestInFlight.current = true;
-
-            const cachedData = cache.get<T>(key);
-
-            if (cachedData) {
-                if (force || isDataStale(cachedData, staleTime)) {
-                    dispatch({
-                        type: 'REFETCH_START',
-                        cachedData: cachedData.data as T,
-                    });
-
-                    await fetchFresh(
-                        fetcher,
-                        abortControllerRef.current,
-                        key,
-                        cache,
-                        dispatch,
-                        onSuccess
-                    );
-                } else {
-                    dispatch({ type: 'SUCCESS', data: cachedData.data as T });
+            try {
+                if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
                 }
-            } else {
-                const newData = await fetcher(
-                    abortControllerRef.current.signal
+                abortControllerRef.current = new AbortController();
+
+                if (hasFetchedOnce.current !== 0)
+                    dispatch({ type: 'FETCHING' });
+
+                requestInFlight.current = true;
+
+                const cachedData = cache.get<T>(key);
+
+                if (cachedData) {
+                    if (force || isDataStale(cachedData, staleTime)) {
+                        dispatch({
+                            type: 'REFETCH_START',
+                            cachedData: cachedData.data as T,
+                        });
+
+                        await fetchFresh(
+                            fetcherRef.current,
+                            abortControllerRef.current,
+                            key,
+                            cache,
+                            dispatch,
+                            onSuccessRef.current
+                        );
+                    } else {
+                        dispatch({
+                            type: 'SUCCESS',
+                            data: cachedData.data as T,
+                        });
+                    }
+                } else {
+                    const newData = await fetcherRef.current(
+                        abortControllerRef.current.signal
+                    );
+
+                    dispatch({ type: 'SUCCESS', data: newData });
+                    onSuccessRef.current?.(newData);
+
+                    updateCache(key, newData, cache);
+                }
+
+                hasFetchedOnce.current = 1;
+                requestInFlight.current = false;
+            } catch (err) {
+                let normalizedError: Error;
+
+                if (err instanceof Error) normalizedError = err;
+                else normalizedError = new Error(String(err));
+
+                if (normalizedError.name === 'AbortError') return;
+
+                dispatch({ type: 'ERROR', error: err });
+                onErrorRef.current?.(err);
+                tempError = err;
+                requestInFlight.current = false;
+            } finally {
+                onSettledRef.current?.(
+                    (cache.get<T>(key)?.data as T) ?? null,
+                    tempError ?? null
                 );
-                
-                dispatch({ type: 'SUCCESS', data: newData });
-                onSuccess?.(newData);
-
-                updateCache(key, newData, cache);
             }
-
-            hasFetchedOnce.current = 1;
-            requestInFlight.current = false;
-        } catch (err) {
-            let normalizedError: Error;
-
-            if (err instanceof Error) normalizedError = err;
-            else normalizedError = new Error(String(err));
-
-            if (normalizedError.name === "AbortError") return;
-
-            dispatch({ type: 'ERROR', error: err });
-            onError?.(err);
-            tempError = err;
-            requestInFlight.current = false;
-
-        } finally {
-            onSettled?.(cache.get<T>(key)?.data as T ?? null, tempError ?? null);
-        }
-    };
+        },
+        [useMemoizedKeys(key), staleTime]
+    );
 
     usePolling(fetchData, pollInterval ?? 0, requestInFlight);
 
@@ -114,12 +128,12 @@ export default function useQuery<T = unknown>(
             if (abortControllerRef.current) abortControllerRef.current.abort();
             hasFetchedOnce.current = 0;
         };
-    }, [useMemoizedKeys(key), fetcher]);
+    }, [useMemoizedKeys(key)]);
 
     const refetch = useCallback(async () => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         return fetchData(true);
-    }, [key, fetcher]);
+    }, [useMemoizedKeys(key)]);
 
     return {
         data: state.data,

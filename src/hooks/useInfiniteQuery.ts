@@ -98,10 +98,13 @@ export default function useInfiniteQuery<T = unknown>(
 
     const fetchNextPage = () => {
         const length = state.data.pageParams.length;
-        if (length !== 0) {
-            const newKey = getNextPageParam(state.data.pageParams[length - 1]);
-            fetchPage(newKey);
+        if (length === 0) {
+            fetchPage(key);
+            return;
         }
+
+        const newKey = getNextPageParam(state.data.pageParams[length - 1]);
+        fetchPage(newKey);
     };
 
     const fetchPreviousPage = () => {
