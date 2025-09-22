@@ -59,7 +59,6 @@ export class VolatileCache extends ICache {
 
     startCacheGC(interval: number) {
         return setInterval(() => {
-            console.log(this.head, this.tail);
             if (this.cache.size <= MAX_CACHE_SIZE) return;
             let count = 0,
                 k = this.cache.size - MAX_CACHE_SIZE;

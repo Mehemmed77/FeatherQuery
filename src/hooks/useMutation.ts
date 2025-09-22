@@ -84,7 +84,7 @@ export default function useMutation<
                 onSuccess?.(response, variables);
 
                 if (invalidateKeys) {
-                    invalidateKeys.forEach((key) => cache.delete(key));
+                    invalidateKeys.forEach((key) => cache.delete([key]));
                 }
 
                 return response;
@@ -97,6 +97,11 @@ export default function useMutation<
                 if (normalizedError.name === "AbortError") return;
 
                 tempError = normalizedError;
+
+                if (rollback && hasOptimisticallyUpdated.current) {
+                    rollback(cache, variables);
+                    hasOptimisticallyUpdated.current = false;
+                }
 
                 if (retriesRef.current > 0) {
                     const attempts = retries - retriesRef.current + 1;
@@ -113,11 +118,6 @@ export default function useMutation<
                 }
 
                 dispatch({ type: 'ERROR', error: tempError });
-
-                if (rollback && hasOptimisticallyUpdated.current) {
-                    rollback(cache, variables);
-                    hasOptimisticallyUpdated.current = false;
-                }
 
                 throw tempError;
 

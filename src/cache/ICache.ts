@@ -39,7 +39,9 @@ export class ICache {
                 break;
             }
 
-            if (!exact && isPrefix(prefix, full)) this.cache.delete(key);
+            if (!exact && isPrefix(prefix, full)){
+                this.cache.delete(key)
+            };
         }
     }
 
