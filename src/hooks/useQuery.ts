@@ -47,7 +47,6 @@ export default function useQuery<T = unknown>(
         try {
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
-                console.log("Aborted");
             };
             abortControllerRef.current = new AbortController();
 

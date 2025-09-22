@@ -17,7 +17,6 @@ export class VolatileCache extends ICache {
     }
 
     set<T>(key: unknown, entry: CacheEntry<T>): void {
-        console.log("SALAM ALEYKUM")
         const hashedKey = hashKey(key);
 
         let existingEntry = this.cache.get(hashedKey);

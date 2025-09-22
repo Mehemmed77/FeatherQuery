@@ -89,32 +89,38 @@ export default function useMutation<
 
                 return response;
             } catch (e: unknown) {
-                if (e instanceof Error && e.name !== 'AbortError') {
-                    tempError = e as TError;
+                let normalizedError: TError;
 
-                    if (retriesRef.current > 0) {
-                        const attempts = retries - retriesRef.current + 1;
-                        retriesRef.current = retriesRef.current - 1;
+                if (e instanceof Error) normalizedError = e as TError;
+                else normalizedError = new Error(String(e)) as TError;
 
-                        retryTimeoutRef.current = setTimeout(
-                            () => execute(variables),
-                            retryDelay(attempts)
-                        );
+                if (normalizedError.name === "AbortError") return;
 
-                        onError?.(tempError, variables);
+                tempError = normalizedError;
 
-                        return;
-                    }
+                if (retriesRef.current > 0) {
+                    const attempts = retries - retriesRef.current + 1;
+                    retriesRef.current = retriesRef.current - 1;
 
-                    dispatch({ type: 'ERROR', error: tempError });
+                    retryTimeoutRef.current = setTimeout(
+                        () => execute(variables),
+                        retryDelay(attempts)
+                    );
 
-                    if (rollback && hasOptimisticallyUpdated.current) {
-                        rollback(cache, variables);
-                        hasOptimisticallyUpdated.current = false;
-                    }
+                    onError?.(tempError, variables);
 
-                    throw tempError;
+                    return;
                 }
+
+                dispatch({ type: 'ERROR', error: tempError });
+
+                if (rollback && hasOptimisticallyUpdated.current) {
+                    rollback(cache, variables);
+                    hasOptimisticallyUpdated.current = false;
+                }
+
+                throw tempError;
+
             } finally {
                 onSettled?.(tempResponse, tempError, variables);
             }
