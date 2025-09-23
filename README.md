@@ -2,7 +2,7 @@
 
 ![logo](assets/mainLogoWithBgTr.png)
 
-# NOTE: This version is not stable. This is still demo, Caching system is incomplete and hooks are not tested to their fullest.
+#### This version is the first stable version. If you see any problems, contact with me via email (mehemmedkazimzade54@gmail.com) or feel free to create PRs. 
 
 Data fetching, light as a **feather**.
 A lightweight React library for fetching, caching, and mutating API data with minimal boilerplate.

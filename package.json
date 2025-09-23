@@ -1,13 +1,14 @@
 {
   "name": "featherquery",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "Data fetching, light as a feather. A lightweight React library for fetching, caching, and mutating API data with minimal boilerplate.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --watch"
+    "dev": "tsup src/index.ts --watch",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
