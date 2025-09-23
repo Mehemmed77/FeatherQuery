@@ -47,7 +47,6 @@ export default function useFetch<T = unknown>(url: string, options?: FetchOption
 
     useEffect(() => {
         fetchData();
-
         return () => {
             if (abortControllerRef.current) abortControllerRef.current.abort();
         };
